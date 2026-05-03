@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FileCode2,
   FileText,
+  ImagePlus,
   Loader2,
   LogIn,
   Pencil,
@@ -45,6 +46,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAssets } from '@/lib/assets';
 import { useFolders } from '@/lib/folders';
 import { useWheelPageNavigation } from '@/lib/use-wheel-page-navigation';
 import { cn } from '@/lib/utils';
@@ -75,9 +77,12 @@ export function Slide() {
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [logoInserting, setLogoInserting] = useState(false);
   const [designOpen, setDesignOpen] = useState(false);
   const [canvaConfigOpen, setCanvaConfigOpen] = useState(false);
   const { renameSlide } = useFolders();
+  const { upload: uploadAsset, available: assetsAvailable } = useAssets(slideId);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const slideViewportRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -218,6 +223,34 @@ export function Slide() {
 
   const CurrentPage = pages[index];
   const title = slide.meta?.title ?? slideId;
+  const insertLogo = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Choose an image file for the logo.');
+      return;
+    }
+    setLogoInserting(true);
+    try {
+      const uploaded = await uploadAsset(file, { overwrite: true });
+      if (!uploaded.ok) throw new Error(`Logo upload failed (${uploaded.status}).`);
+
+      const res = await fetch(`/__slides/${slideId}/logo`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          assetPath: `./assets/${file.name}`,
+          page: index,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? `Logo insert failed (${res.status}).`);
+      toast.success(`Logo inserted on slide ${index + 1}.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Logo insert failed');
+    } finally {
+      setLogoInserting(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
 
   return (
     <HistoryProvider>
@@ -265,6 +298,36 @@ export function Slide() {
             </div>
 
             <div className="flex items-center gap-1">
+              {view === 'slides' && import.meta.env.DEV && (
+                <>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      if (file) void insertLogo(file);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!assetsAvailable || logoInserting}
+                    onClick={() => logoInputRef.current?.click()}
+                    title="Insert logo on this slide"
+                    className="px-2.5 md:px-3"
+                  >
+                    {logoInserting ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <ImagePlus className="size-3.5" />
+                    )}
+                    <span className="hidden md:inline">Logo</span>
+                  </Button>
+                </>
+              )}
               {view === 'slides' && allowHtmlDownload && (
                 <DropdownMenu>
                   <DropdownMenuTrigger

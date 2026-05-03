@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  insertLogoInSource,
   mimeForFilename,
   updateMetaTitleInSource,
   validateAssetName,
@@ -116,6 +117,43 @@ describe('updateMetaTitleInSource', () => {
 
   it('returns null if there is no meta and no default export', () => {
     expect(updateMetaTitleInSource('// nothing here', 'x')).toBeNull();
+  });
+});
+
+describe('insertLogoInSource', () => {
+  it('imports the logo asset and wraps the selected page component', () => {
+    const source = `import type { Page } from '@open-slide/core';\n\nconst Cover: Page = () => <div />;\nconst Detail: Page = () => <section />;\n\nexport default [Cover, Detail] satisfies Page[];\n`;
+    const out = insertLogoInSource(source, './assets/logo.png', 1);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.source).toContain("import logo from './assets/logo.png';");
+    expect(out.source).toContain('<Detail />');
+    expect(out.source).toContain('data-master-of-slide-logo');
+    expect(out.source).toContain('export default [Cover, (() => (');
+  });
+
+  it('reuses an existing default import for the same logo asset', () => {
+    const source = `import mark from './assets/logo.svg';\n\nconst Cover = () => <div />;\n\nexport default [Cover];\n`;
+    const out = insertLogoInSource(source, './assets/logo.svg', 0);
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.source.match(/from '\.\/assets\/logo\.svg'/g)).toHaveLength(1);
+    expect(out.source).toContain('src={mark}');
+  });
+
+  it('rejects non-asset paths', () => {
+    const out = insertLogoInSource('export default [];\n', '../logo.png', 0);
+    expect(out.ok).toBe(false);
+    if (out.ok) return;
+    expect(out.status).toBe(400);
+  });
+
+  it('rejects non-identifier page entries to avoid unsafe rewrites', () => {
+    const source = `export default [() => <div />];\n`;
+    const out = insertLogoInSource(source, './assets/logo.png', 0);
+    expect(out.ok).toBe(false);
+    if (out.ok) return;
+    expect(out.status).toBe(422);
   });
 });
 

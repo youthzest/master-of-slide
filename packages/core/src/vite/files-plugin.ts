@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
 import path from 'node:path';
+import { parse as babelParse } from '@babel/parser';
 import type { Connect, Plugin, ViteDevServer } from 'vite';
+import type { AstNode } from './babel-walk.ts';
 
 const FOLDER_ID_RE = /^f-[a-f0-9]{8}$/;
 const SLIDE_ID_RE = /^[a-z0-9_-]+$/i;
@@ -71,6 +73,7 @@ type CreateBody = { name?: unknown; icon?: unknown };
 type PatchBody = { name?: unknown; icon?: unknown };
 type AssignBody = { slideId?: unknown; folderId?: unknown };
 type SlidePatchBody = { name?: unknown };
+type LogoBody = { assetPath?: unknown; page?: unknown };
 
 async function readBody(req: Connect.IncomingMessage): Promise<unknown> {
   return await new Promise((resolve, reject) => {
@@ -180,6 +183,180 @@ function resolveSlideEntry(slidesRoot: string, slideId: string): string | null {
 
 function escapeSingleQuoted(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function parseSource(source: string): AstNode | null {
+  try {
+    return babelParse(source, {
+      sourceType: 'module',
+      plugins: ['typescript', 'jsx'],
+      errorRecovery: true,
+    }) as unknown as AstNode;
+  } catch {
+    return null;
+  }
+}
+
+type ImportInfo = { node: AstNode; source: string; defaultIdent: string | null };
+
+function findImports(ast: AstNode): ImportInfo[] {
+  const body = (ast as unknown as { program?: { body?: AstNode[] } }).program?.body ?? [];
+  const out: ImportInfo[] = [];
+  for (const node of body) {
+    if (node.type !== 'ImportDeclaration') continue;
+    const src = (node as unknown as { source?: { value?: unknown } }).source?.value;
+    if (typeof src !== 'string') continue;
+    const specs = (node as unknown as { specifiers?: AstNode[] }).specifiers ?? [];
+    let def: string | null = null;
+    for (const spec of specs) {
+      if (spec.type !== 'ImportDefaultSpecifier') continue;
+      const local = (spec as unknown as { local?: { name?: unknown } }).local?.name;
+      if (typeof local === 'string') {
+        def = local;
+        break;
+      }
+    }
+    out.push({ node, source: src, defaultIdent: def });
+  }
+  return out;
+}
+
+function collectImportIdentifiers(ast: AstNode): Set<string> {
+  const names = new Set<string>();
+  for (const imp of findImports(ast)) {
+    if (imp.defaultIdent) names.add(imp.defaultIdent);
+    const specs = (imp.node as unknown as { specifiers?: AstNode[] }).specifiers ?? [];
+    for (const spec of specs) {
+      const local = (spec as unknown as { local?: { name?: unknown } }).local?.name;
+      if (typeof local === 'string') names.add(local);
+    }
+  }
+  return names;
+}
+
+function safeAssetIdentifier(filename: string, taken: Set<string>): string {
+  const stem = filename.replace(/\.[^.]+$/, '');
+  let camel = '';
+  let upper = false;
+  for (const ch of stem) {
+    if (/[A-Za-z0-9]/.test(ch)) {
+      camel += upper ? ch.toUpperCase() : ch;
+      upper = false;
+    } else {
+      upper = camel.length > 0;
+    }
+  }
+  let base = camel;
+  if (!base || !/^[A-Za-z_$]/.test(base)) {
+    base = `asset${base.charAt(0).toUpperCase()}${base.slice(1)}` || 'asset';
+  }
+  base = base.charAt(0).toLowerCase() + base.slice(1);
+  let candidate = base;
+  let i = 2;
+  while (taken.has(candidate)) {
+    candidate = `${base}${i}`;
+    i += 1;
+  }
+  return candidate;
+}
+
+function validSlideAssetPath(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  if (!v.startsWith('./assets/')) return null;
+  const filename = v.slice('./assets/'.length);
+  return validateAssetName(filename) ? v : null;
+}
+
+type LogoInsertResult = { ok: true; source: string } | { ok: false; status: number; error: string };
+
+export function insertLogoInSource(
+  source: string,
+  assetPath: string,
+  pageIndex: number,
+): LogoInsertResult {
+  if (!Number.isInteger(pageIndex) || pageIndex < 0) {
+    return { ok: false, status: 400, error: 'invalid page index' };
+  }
+  if (!validSlideAssetPath(assetPath)) {
+    return { ok: false, status: 400, error: 'invalid asset path' };
+  }
+
+  const ast = parseSource(source);
+  if (!ast) return { ok: false, status: 422, error: 'could not parse slide source' };
+
+  const imports = findImports(ast);
+  let identifier: string | null = null;
+  for (const imp of imports) {
+    if (imp.source === assetPath && imp.defaultIdent) {
+      identifier = imp.defaultIdent;
+      break;
+    }
+  }
+
+  let importText = '';
+  if (!identifier) {
+    const filename = assetPath.slice(assetPath.lastIndexOf('/') + 1);
+    identifier = safeAssetIdentifier(filename, collectImportIdentifiers(ast));
+    importText = `import ${identifier} from '${assetPath.replace(/'/g, "\\'")}';\n`;
+  }
+
+  const body = (ast as unknown as { program?: { body?: AstNode[] } }).program?.body ?? [];
+  const exportDefault = body.find((node) => node.type === 'ExportDefaultDeclaration');
+  const declaration = (exportDefault as unknown as { declaration?: AstNode } | undefined)
+    ?.declaration;
+  const array =
+    declaration?.type === 'ArrayExpression'
+      ? declaration
+      : declaration?.type === 'TSSatisfiesExpression'
+        ? ((declaration as unknown as { expression?: AstNode }).expression ?? null)
+        : null;
+  if (!array || array.type !== 'ArrayExpression') {
+    return { ok: false, status: 422, error: 'export default must be an array of page components' };
+  }
+
+  const elements = (array as unknown as { elements?: Array<AstNode | null> }).elements ?? [];
+  const element = elements[pageIndex];
+  if (!element) return { ok: false, status: 404, error: 'page not found' };
+  if (element.type !== 'Identifier') {
+    return { ok: false, status: 422, error: 'selected page is not a named component' };
+  }
+
+  const pageName = (element as unknown as { name?: unknown }).name;
+  if (typeof pageName !== 'string') {
+    return { ok: false, status: 422, error: 'selected page name is unsupported' };
+  }
+
+  const wrapper = `(() => (
+  <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <${pageName} />
+    <img
+      src={${identifier}}
+      alt="Logo"
+      data-master-of-slide-logo
+      style={{
+        position: 'absolute',
+        right: 72,
+        top: 56,
+        width: 180,
+        height: 'auto',
+        maxHeight: 120,
+        objectFit: 'contain',
+        zIndex: 50,
+        pointerEvents: 'none',
+      }}
+    />
+  </div>
+))`;
+
+  const insertAt = imports.length > 0 ? imports[imports.length - 1].node.end : 0;
+  const importPrefix = importText ? (imports.length > 0 ? '\n' : '') + importText : '';
+  const withWrappedPage = source.slice(0, element.start) + wrapper + source.slice(element.end);
+  const withImport =
+    importPrefix.length > 0
+      ? withWrappedPage.slice(0, insertAt) + importPrefix + withWrappedPage.slice(insertAt)
+      : withWrappedPage;
+
+  return { ok: true, source: withImport };
 }
 
 /**
@@ -306,10 +483,37 @@ export function filesPlugin(opts: FilesPluginOptions): Plugin {
         const method = req.method ?? 'GET';
 
         try {
+          const logoMatch = url.pathname.match(/^\/([^/]+)\/logo$/);
           const idMatch = url.pathname.match(/^\/([^/]+)$/);
-          if (!idMatch) return next();
-          const slideId = idMatch[1];
+          if (!idMatch && !logoMatch) return next();
+          const slideId = (logoMatch ?? idMatch)?.[1] ?? '';
           if (!SLIDE_ID_RE.test(slideId)) return json(res, 400, { error: 'invalid slideId' });
+
+          if (logoMatch && method === 'POST') {
+            const body = (await readBody(req)) as LogoBody;
+            const assetPath = validSlideAssetPath(body.assetPath);
+            const page = Number(body.page);
+            if (!assetPath) return json(res, 400, { error: 'invalid assetPath' });
+            if (!Number.isInteger(page) || page < 0) {
+              return json(res, 400, { error: 'invalid page' });
+            }
+
+            const entry = resolveSlideEntry(slidesRoot, slideId);
+            if (!entry) return json(res, 400, { error: 'invalid slideId' });
+
+            let source: string;
+            try {
+              source = await fs.readFile(entry, 'utf8');
+            } catch {
+              return json(res, 404, { error: 'slide not found' });
+            }
+
+            const result = insertLogoInSource(source, assetPath, page);
+            if (!result.ok) return json(res, result.status, { error: result.error });
+            if (result.source !== source) await fs.writeFile(entry, result.source, 'utf8');
+            server.ws.send({ type: 'full-reload' });
+            return json(res, 200, { ok: true, changed: result.source !== source });
+          }
 
           if (method === 'PATCH') {
             const body = (await readBody(req)) as SlidePatchBody;
