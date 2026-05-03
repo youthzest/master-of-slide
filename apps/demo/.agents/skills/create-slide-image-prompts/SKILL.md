@@ -13,6 +13,10 @@ the deck.
 Only write generated or copied assets under `slides/<id>/assets/`. Do not modify
 the source Markdown note.
 
+When invoked from `/slide`, respect the user's requested image count. If the
+count is missing, ask for it before planning assets. If the user delegates the
+choice, default to 2 generated images.
+
 ## Prompt Assembly
 
 Use this structure:
@@ -120,7 +124,9 @@ Use for scenarios, journeys, campaign narratives, and character-based explainers
 
 ## Slide Asset Rules
 
-- Generate only when the image improves the deck.
+- Generate the requested number of images. If fewer images would be better,
+  explain briefly and ask only if reducing the count would materially change the
+  user's requested deck.
 - Prefer one strong hero image over decorative filler.
 - Keep Korean text out of generated images unless the user explicitly needs it;
   add Korean text as React text for editability.

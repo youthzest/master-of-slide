@@ -14,8 +14,21 @@ You only write files under `slides/<id>/`. Never modify the source note.
 
 The user should provide a local Markdown path. If they also provide audience,
 page count, language, tone, or visual direction, treat those as authoritative.
-If not, infer conservative defaults and ask only for missing decisions that
-would materially change the deck.
+If not, infer conservative defaults, but always resolve these two creation
+decisions before writing files:
+
+- page count
+- generated image count
+
+Ask concise questions when either value is missing. Recommended Korean prompt:
+
+```text
+슬라이드 몇 장으로 만들까요? 생성 이미지는 몇 개 넣을까요?
+```
+
+If the user asks the agent to decide automatically, use 8 pages and 2 generated
+images. If image generation is unavailable, treat the image count as the number
+of image placeholders/prompts to create.
 
 For Obsidian notes, support common syntax:
 
@@ -38,7 +51,8 @@ For Obsidian notes, support common syntax:
    - major sections
    - key claims, examples, and data points
    - assets referenced by embeds or Markdown image links
-4. Create a slide plan with one idea per page. Prefer 6-12 pages unless the user requested otherwise.
+4. Create a slide plan with one idea per page. Use the requested page count.
+   If the user delegated the choice, prefer 8 pages.
 5. Choose a slide id from the note title in kebab-case. Use romanized or English ids for Korean titles.
 6. Create `slides/<id>/index.tsx` and copy any resolved local assets into `slides/<id>/assets/`.
 7. Use Korean-friendly defaults when the source note or user request is Korean:
@@ -49,13 +63,15 @@ For Obsidian notes, support common syntax:
 
 ## AI-generated images
 
-If the deck would benefit from a conceptual hero image, texture, diagram-like
-visual, or chapter artwork, and the current Codex environment offers image
+Use the requested generated image count. Place images on the pages where they
+add the most value: cover hero, key concept diagram, product/UI visual, chapter
+opener, or summary poster. If the current Codex environment offers image
 generation, generate bitmap assets and save them under `slides/<id>/assets/`.
 
 Rules:
 
-- Generate images only when they improve the deck, not for every page.
+- Generate exactly the requested number of images unless the user changes the
+  count or the request violates policy/safety constraints.
 - Prefer 16:9 images for full-bleed slides and transparent PNG cutouts for objects.
 - Keep prompts concrete and tied to the source note's meaning.
 - Do not generate images that pretend to be real screenshots, real charts,
