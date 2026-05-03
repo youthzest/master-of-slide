@@ -97,6 +97,7 @@ async function renderPagesToPng(
       await nextPaint(2);
       await waitForImages(host);
       await waitForFonts();
+      await waitForAnimations(host);
       await nextPaint();
 
       result.push(
@@ -131,6 +132,21 @@ function nextPaint(frames = 1): Promise<void> {
 
 async function waitForFonts(): Promise<void> {
   if ('fonts' in document) await document.fonts.ready;
+}
+
+async function waitForAnimations(root: HTMLElement): Promise<void> {
+  const animations = root.getAnimations({ subtree: true });
+  if (animations.length === 0) return;
+
+  await Promise.all(
+    animations.map(async (animation) => {
+      try {
+        await animation.finished;
+      } catch {
+        // Ignore cancelled animations; the current rendered state is still safe to capture.
+      }
+    }),
+  );
 }
 
 async function waitForImages(root: HTMLElement): Promise<void> {
