@@ -4,6 +4,7 @@ dist
 *.log
 .env
 .env.*
+.canva-oauth-state.json
 .omx
 .playwright-mcp
 .vite

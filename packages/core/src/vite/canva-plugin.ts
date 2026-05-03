@@ -48,7 +48,9 @@ export function canvaPlugin(opts: CanvaPluginOptions = {}): Plugin {
   const pending = new Map<string, PendingAuth>();
   let tokenState: TokenState | null = null;
   const env = opts.env ?? process.env;
-  const envPath = path.join(opts.userCwd ?? process.cwd(), '.env');
+  const userCwd = opts.userCwd ?? process.cwd();
+  const envPath = path.join(userCwd, '.env');
+  const oauthStatePath = path.join(userCwd, '.canva-oauth-state.json');
 
   return {
     name: 'open-slide:canva',
@@ -135,6 +137,7 @@ export function canvaPlugin(opts: CanvaPluginOptions = {}): Plugin {
               expiresAt: Date.now() + 10 * 60 * 1000,
             };
             pending.set(state, { codeVerifier, redirectUri });
+            await persistOAuthState(oauthStatePath, authState);
 
             const auth = new URL(AUTH_URL);
             auth.searchParams.set('code_challenge', codeChallenge);
@@ -155,7 +158,11 @@ export function canvaPlugin(opts: CanvaPluginOptions = {}): Plugin {
           if (url.pathname === '/api/canva/callback') {
             const code = url.searchParams.get('code');
             const state = url.searchParams.get('state');
-            const auth = state ? (pending.get(state) ?? authFromCookie(req, state)) : null;
+            const auth = state
+              ? (pending.get(state) ??
+                authFromCookie(req, state) ??
+                (await authFromFile(oauthStatePath, state)))
+              : null;
             if (!code || !state || !auth) {
               return html(
                 res,
@@ -164,6 +171,7 @@ export function canvaPlugin(opts: CanvaPluginOptions = {}): Plugin {
               );
             }
             pending.delete(state);
+            await clearOAuthState(oauthStatePath, state);
             clearOAuthCookie(res);
             tokenState = await exchangeCode(code, auth, credentials());
             return html(res, 200, 'Canva connected. You can close this tab.', { autoClose: true });
@@ -404,6 +412,47 @@ function parseCookies(req: Connect.IncomingMessage): Record<string, string> {
       return key ? [[key, value]] : [];
     }),
   );
+}
+
+async function persistOAuthState(filePath: string, auth: StoredAuth): Promise<void> {
+  const states = await readOAuthStates(filePath);
+  states[auth.state] = auth;
+  pruneOAuthStates(states);
+  await writeFile(filePath, `${JSON.stringify(states, null, 2)}\n`, 'utf8');
+}
+
+async function authFromFile(filePath: string, state: string): Promise<PendingAuth | null> {
+  const states = await readOAuthStates(filePath);
+  pruneOAuthStates(states);
+  const auth = states[state];
+  if (!auth || auth.expiresAt <= Date.now()) return null;
+  if (!auth.codeVerifier || !auth.redirectUri) return null;
+  return { codeVerifier: auth.codeVerifier, redirectUri: auth.redirectUri };
+}
+
+async function clearOAuthState(filePath: string, state: string): Promise<void> {
+  const states = await readOAuthStates(filePath);
+  delete states[state];
+  pruneOAuthStates(states);
+  await writeFile(filePath, `${JSON.stringify(states, null, 2)}\n`, 'utf8');
+}
+
+async function readOAuthStates(filePath: string): Promise<Record<string, StoredAuth>> {
+  try {
+    const text = await readFile(filePath, 'utf8');
+    const parsed = JSON.parse(text) as Record<string, StoredAuth>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (err) {
+    if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return {};
+    throw err;
+  }
+}
+
+function pruneOAuthStates(states: Record<string, StoredAuth>): void {
+  const now = Date.now();
+  for (const [state, auth] of Object.entries(states)) {
+    if (!auth || auth.expiresAt <= now) delete states[state];
+  }
 }
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
