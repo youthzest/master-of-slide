@@ -74,6 +74,7 @@ type PatchBody = { name?: unknown; icon?: unknown };
 type AssignBody = { slideId?: unknown; folderId?: unknown };
 type SlidePatchBody = { name?: unknown };
 type LogoBody = { assetPath?: unknown; page?: unknown };
+type LogoPageTarget = number | 'all';
 
 async function readBody(req: Connect.IncomingMessage): Promise<unknown> {
   return await new Promise((resolve, reject) => {
@@ -272,9 +273,9 @@ type LogoInsertResult = { ok: true; source: string } | { ok: false; status: numb
 export function insertLogoInSource(
   source: string,
   assetPath: string,
-  pageIndex: number,
+  pageTarget: LogoPageTarget,
 ): LogoInsertResult {
-  if (!Number.isInteger(pageIndex) || pageIndex < 0) {
+  if (pageTarget !== 'all' && (!Number.isInteger(pageTarget) || pageTarget < 0)) {
     return { ok: false, status: 400, error: 'invalid page index' };
   }
   if (!validSlideAssetPath(assetPath)) {
@@ -315,18 +316,29 @@ export function insertLogoInSource(
   }
 
   const elements = (array as unknown as { elements?: Array<AstNode | null> }).elements ?? [];
-  const element = elements[pageIndex];
-  if (!element) return { ok: false, status: 404, error: 'page not found' };
-  if (element.type !== 'Identifier') {
+  const targets =
+    pageTarget === 'all'
+      ? elements.flatMap((element) => (element?.type === 'Identifier' ? [element] : []))
+      : elements[pageTarget]
+        ? [elements[pageTarget]]
+        : [];
+  if (targets.length === 0) {
+    return {
+      ok: false,
+      status: pageTarget === 'all' ? 422 : 404,
+      error: pageTarget === 'all' ? 'no named pages to wrap' : 'page not found',
+    };
+  }
+  if (pageTarget !== 'all' && targets[0]?.type !== 'Identifier') {
     return { ok: false, status: 422, error: 'selected page is not a named component' };
   }
 
-  const pageName = (element as unknown as { name?: unknown }).name;
-  if (typeof pageName !== 'string') {
-    return { ok: false, status: 422, error: 'selected page name is unsupported' };
-  }
-
-  const wrapper = `(() => (
+  const replacements = targets.map((element) => {
+    const pageName = (element as unknown as { name?: unknown }).name;
+    if (typeof pageName !== 'string') {
+      return null;
+    }
+    const wrapper = `(() => (
   <div style={{ width: '100%', height: '100%', position: 'relative' }}>
     <${pageName} />
     <img
@@ -347,10 +359,22 @@ export function insertLogoInSource(
     />
   </div>
 ))`;
+    return { from: element.start, to: element.end, text: wrapper };
+  });
+  if (replacements.some((replacement) => replacement === null)) {
+    return { ok: false, status: 422, error: 'selected page name is unsupported' };
+  }
 
   const insertAt = imports.length > 0 ? imports[imports.length - 1].node.end : 0;
   const importPrefix = importText ? (imports.length > 0 ? '\n' : '') + importText : '';
-  const withWrappedPage = source.slice(0, element.start) + wrapper + source.slice(element.end);
+  const withWrappedPage = replacements
+    .filter((replacement): replacement is { from: number; to: number; text: string } =>
+      Boolean(replacement),
+    )
+    .sort((a, b) => b.from - a.from)
+    .reduce((next, replacement) => {
+      return next.slice(0, replacement.from) + replacement.text + next.slice(replacement.to);
+    }, source);
   const withImport =
     importPrefix.length > 0
       ? withWrappedPage.slice(0, insertAt) + importPrefix + withWrappedPage.slice(insertAt)
@@ -492,9 +516,9 @@ export function filesPlugin(opts: FilesPluginOptions): Plugin {
           if (logoMatch && method === 'POST') {
             const body = (await readBody(req)) as LogoBody;
             const assetPath = validSlideAssetPath(body.assetPath);
-            const page = Number(body.page);
+            const page = body.page === 'all' ? 'all' : Number(body.page);
             if (!assetPath) return json(res, 400, { error: 'invalid assetPath' });
-            if (!Number.isInteger(page) || page < 0) {
+            if (page !== 'all' && (!Number.isInteger(page) || page < 0)) {
               return json(res, 400, { error: 'invalid page' });
             }
 

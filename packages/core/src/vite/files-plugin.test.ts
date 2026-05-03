@@ -141,6 +141,26 @@ describe('insertLogoInSource', () => {
     expect(out.source).toContain('src={mark}');
   });
 
+  it('can wrap every named page component in the default export', () => {
+    const source = `const Cover = () => <div />;\nconst Detail = () => <section />;\n\nexport default [Cover, Detail];\n`;
+    const out = insertLogoInSource(source, './assets/logo.png', 'all');
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.source).toContain("import logo from './assets/logo.png';");
+    expect(out.source.match(/data-master-of-slide-logo/g)).toHaveLength(2);
+    expect(out.source).toContain('<Cover />');
+    expect(out.source).toContain('<Detail />');
+  });
+
+  it('skips already wrapped entries when inserting into all named pages', () => {
+    const source = `const Cover = () => <div />;\nconst Detail = () => <section />;\n\nexport default [(() => <Cover />), Detail];\n`;
+    const out = insertLogoInSource(source, './assets/logo.png', 'all');
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.source.match(/data-master-of-slide-logo/g)).toHaveLength(1);
+    expect(out.source).toContain('<Detail />');
+  });
+
   it('rejects non-asset paths', () => {
     const out = insertLogoInSource('export default [];\n', '../logo.png', 0);
     expect(out.ok).toBe(false);

@@ -69,6 +69,7 @@ import type { SlideModule } from '../lib/sdk';
 import { loadSlide } from '../lib/slides';
 
 const { showSlideUi, showSlideBrowser, allowHtmlDownload } = config.build;
+type LogoTarget = number | 'all';
 
 export function Slide() {
   const { slideId = '' } = useParams();
@@ -83,6 +84,7 @@ export function Slide() {
   const { renameSlide } = useFolders();
   const { upload: uploadAsset, available: assetsAvailable } = useAssets(slideId);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const logoTargetRef = useRef<LogoTarget>(0);
   const slideViewportRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -223,7 +225,11 @@ export function Slide() {
 
   const CurrentPage = pages[index];
   const title = slide.meta?.title ?? slideId;
-  const insertLogo = async (file: File) => {
+  const pickLogo = (target: LogoTarget) => {
+    logoTargetRef.current = target;
+    logoInputRef.current?.click();
+  };
+  const insertLogo = async (file: File, target: LogoTarget) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Choose an image file for the logo.');
       return;
@@ -238,12 +244,14 @@ export function Slide() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           assetPath: `./assets/${file.name}`,
-          page: index,
+          page: target,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? `Logo insert failed (${res.status}).`);
-      toast.success(`Logo inserted on slide ${index + 1}.`);
+      toast.success(
+        target === 'all' ? 'Logo inserted on all pages.' : `Logo inserted on slide ${index + 1}.`,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Logo insert failed');
     } finally {
@@ -307,25 +315,38 @@ export function Slide() {
                     className="hidden"
                     onChange={(event) => {
                       const file = event.currentTarget.files?.[0];
-                      if (file) void insertLogo(file);
+                      if (file) void insertLogo(file, logoTargetRef.current);
                     }}
                   />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={!assetsAvailable || logoInserting}
-                    onClick={() => logoInputRef.current?.click()}
-                    title="Insert logo on this slide"
-                    className="px-2.5 md:px-3"
-                  >
-                    {logoInserting ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <ImagePlus className="size-3.5" />
-                    )}
-                    <span className="hidden md:inline">Logo</span>
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      type="button"
+                      disabled={!assetsAvailable || logoInserting}
+                      aria-label="Insert logo"
+                      title="Insert logo"
+                      className={cn(
+                        buttonVariants({ variant: 'outline', size: 'sm' }),
+                        'px-2.5 md:px-3',
+                      )}
+                    >
+                      {logoInserting ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <ImagePlus className="size-3.5" />
+                      )}
+                      <span className="hidden md:inline">Logo</span>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[180px]">
+                      <DropdownMenuItem disabled={logoInserting} onSelect={() => pickLogo(index)}>
+                        <ImagePlus />
+                        Current page
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled={logoInserting} onSelect={() => pickLogo('all')}>
+                        <ImagePlus />
+                        All pages
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               )}
               {view === 'slides' && allowHtmlDownload && (
