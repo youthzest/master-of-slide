@@ -9,6 +9,7 @@ const TOKEN_URL = 'https://api.canva.com/rest/v1/oauth/token';
 const IMPORTS_URL = 'https://api.canva.com/rest/v1/imports';
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 const SCOPES = 'design:content:write';
+const OAUTH_COOKIE = 'master_of_slide_canva_oauth';
 
 type TokenState = {
   accessToken: string;
@@ -20,6 +21,11 @@ type TokenState = {
 type PendingAuth = {
   codeVerifier: string;
   redirectUri: string;
+};
+
+type StoredAuth = PendingAuth & {
+  state: string;
+  expiresAt: number;
 };
 
 type ImportJob = {
@@ -122,6 +128,12 @@ export function canvaPlugin(opts: CanvaPluginOptions = {}): Plugin {
               .update(codeVerifier)
               .digest('base64url');
             const state = crypto.randomBytes(32).toString('base64url');
+            const authState = {
+              codeVerifier,
+              redirectUri,
+              state,
+              expiresAt: Date.now() + 10 * 60 * 1000,
+            };
             pending.set(state, { codeVerifier, redirectUri });
 
             const auth = new URL(AUTH_URL);
@@ -134,6 +146,7 @@ export function canvaPlugin(opts: CanvaPluginOptions = {}): Plugin {
             auth.searchParams.set('redirect_uri', redirectUri);
 
             res.statusCode = 302;
+            setOAuthCookie(res, authState);
             res.setHeader('location', auth.toString());
             res.end();
             return;
@@ -142,9 +155,16 @@ export function canvaPlugin(opts: CanvaPluginOptions = {}): Plugin {
           if (url.pathname === '/api/canva/callback') {
             const code = url.searchParams.get('code');
             const state = url.searchParams.get('state');
-            const auth = state ? pending.get(state) : null;
-            if (!code || !state || !auth) return html(res, 400, 'Canva login state mismatch.');
+            const auth = state ? (pending.get(state) ?? authFromCookie(req, state)) : null;
+            if (!code || !state || !auth) {
+              return html(
+                res,
+                400,
+                'Canva login session expired. Close this tab and click Connect Canva again from Master Of Slide.',
+              );
+            }
             pending.delete(state);
+            clearOAuthCookie(res);
             tokenState = await exchangeCode(code, auth, credentials());
             return html(res, 200, 'Canva connected. You can close this tab.', { autoClose: true });
           }
@@ -342,6 +362,48 @@ function html(
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function setOAuthCookie(res: ServerResponse, auth: StoredAuth): void {
+  const value = Buffer.from(JSON.stringify(auth), 'utf8').toString('base64url');
+  res.setHeader(
+    'set-cookie',
+    `${OAUTH_COOKIE}=${value}; Max-Age=600; Path=/api/canva/callback; HttpOnly; SameSite=Lax`,
+  );
+}
+
+function clearOAuthCookie(res: ServerResponse): void {
+  res.setHeader(
+    'set-cookie',
+    `${OAUTH_COOKIE}=; Max-Age=0; Path=/api/canva/callback; HttpOnly; SameSite=Lax`,
+  );
+}
+
+function authFromCookie(req: Connect.IncomingMessage, state: string): PendingAuth | null {
+  const raw = parseCookies(req)[OAUTH_COOKIE];
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as StoredAuth;
+    if (parsed.state !== state || parsed.expiresAt <= Date.now()) return null;
+    if (!parsed.codeVerifier || !parsed.redirectUri) return null;
+    return { codeVerifier: parsed.codeVerifier, redirectUri: parsed.redirectUri };
+  } catch {
+    return null;
+  }
+}
+
+function parseCookies(req: Connect.IncomingMessage): Record<string, string> {
+  const header = req.headers.cookie;
+  if (!header) return {};
+  return Object.fromEntries(
+    header.split(';').flatMap((part) => {
+      const index = part.indexOf('=');
+      if (index === -1) return [];
+      const key = part.slice(0, index).trim();
+      const value = part.slice(index + 1).trim();
+      return key ? [[key, value]] : [];
+    }),
+  );
 }
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
