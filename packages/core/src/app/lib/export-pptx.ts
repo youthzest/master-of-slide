@@ -1,6 +1,7 @@
 import { toPng } from 'html-to-image';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
+import { type DesignSystem, defaultDesign, designToCssVars } from './design';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, type SlideModule } from './sdk';
 
 type PptxExportOptions = { lang?: string };
@@ -26,9 +27,10 @@ export async function createPptxBlob(
   const pages = slide.default ?? [];
   if (pages.length === 0) throw new Error('PPTX export requires at least one slide page.');
 
+  const design = slide.design ?? defaultDesign;
   const [{ default: PptxGenJS }, pageImages] = await Promise.all([
     import('pptxgenjs'),
-    renderPagesToPng(pages),
+    renderPagesToPng(pages, design),
   ]);
 
   const pptx = new PptxGenJS();
@@ -38,13 +40,13 @@ export async function createPptxBlob(
   pptx.title = slide.meta?.title ?? slideId;
   pptx.company = 'Master Of Slide, based on open-slide source';
   pptx.theme = {
-    headFontFace: 'Aptos Display',
-    bodyFontFace: 'Aptos',
+    headFontFace: primaryFontFace(design.fonts.display),
+    bodyFontFace: primaryFontFace(design.fonts.body),
   };
 
   pageImages.forEach((data, i) => {
     const page = pptx.addSlide();
-    page.background = { color: 'FFFFFF' };
+    page.background = { color: hexColor(design.palette.bg, 'FFFFFF') };
     page.addImage({ data, x: 0, y: 0, w: SLIDE_W, h: SLIDE_H });
     const note = slide.notes?.[i];
     if (note) {
@@ -60,7 +62,10 @@ export async function createPptxBlob(
   return new Blob([content], { type: PPTX_MIME });
 }
 
-async function renderPagesToPng(pages: NonNullable<SlideModule['default']>): Promise<string[]> {
+async function renderPagesToPng(
+  pages: NonNullable<SlideModule['default']>,
+  design: DesignSystem,
+): Promise<string[]> {
   const container = document.createElement('div');
   container.setAttribute('aria-hidden', 'true');
   Object.assign(container.style, {
@@ -77,9 +82,11 @@ async function renderPagesToPng(pages: NonNullable<SlideModule['default']>): Pro
   try {
     for (const Page of pages) {
       const host = document.createElement('div');
+      host.setAttribute('data-osd-canvas', '');
       host.style.width = `${CANVAS_WIDTH}px`;
       host.style.height = `${CANVAS_HEIGHT}px`;
-      host.style.background = '#fff';
+      host.style.background = design.palette.bg;
+      Object.assign(host.style, designToCssVars(design));
       container.appendChild(host);
 
       const root = createRoot(host);
@@ -93,7 +100,7 @@ async function renderPagesToPng(pages: NonNullable<SlideModule['default']>): Pro
           width: CANVAS_WIDTH,
           height: CANVAS_HEIGHT,
           pixelRatio: 1,
-          backgroundColor: '#ffffff',
+          backgroundColor: design.palette.bg,
           cacheBust: true,
         }),
       );
@@ -145,4 +152,15 @@ function downloadBlob(blob: Blob, filename: string, type: string): void {
 function pptxFilename(slideId: string): string {
   const base = slideId.trim() || 'master-of-slide';
   return base.toLowerCase().endsWith('.pptx') ? base : `${base}.pptx`;
+}
+
+function primaryFontFace(stack: string): string {
+  const [first] = stack.split(',');
+  return first?.trim().replace(/^["']|["']$/g, '') || 'Aptos';
+}
+
+function hexColor(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  const match = /^#?([0-9a-f]{6})$/i.exec(trimmed);
+  return match?.[1]?.toUpperCase() ?? fallback;
 }
