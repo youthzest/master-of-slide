@@ -45,17 +45,53 @@ the current agent environment, still ask for the intended image count, then
 create that many precise `ImagePlaceholder` hints instead of bitmap assets.
 
 When an ask-user-question UI is available, ask the theme question as a choice
-picker. Otherwise, ask a concise textual multiple-choice question. Use these
-theme options:
+picker. Show every available theme option, not only files under `themes/*.md`.
+If the current ask-user-question implementation limits the number of choices,
+use a two-step picker:
 
-- `auto` — infer from the note's genre, audience, and assets.
-- `editorial-noir` — dark magazine style; best for news insight, essays, and
-  cinematic/photo-led decks. Reads well when exported to Canva because the
-  structure remains React text plus normal images.
-- `paper-press` — light print style; best for reports, handouts, lectures, and
-  Korean long-form readability.
-- `neon-terminal` — dark terminal style; best for developer demos, CLI/tooling,
-  code walkthroughs, and intentionally technical decks.
+1. Ask for a theme group: `auto/recommended`, `official themes`, or
+   `demo-derived themes`.
+2. Ask for the concrete theme inside that group.
+
+For ask-user-question, use Korean option labels and descriptions so the user can
+choose without reading English theme names. Recommended labels:
+
+- `auto (자동 추천)`
+- `editorial-noir (다크 매거진)`
+- `paper-press (종이 리포트)`
+- `neon-terminal (터미널)`
+- `neo-brutalism (네오 브루탈리즘)`
+- `research-brief (연구 브리프)`
+- `vercel-minimal (미니멀 제품)`
+- `raycast-dark-product (다크 제품)`
+- `photo-editorial-tech (실사 테크 매거진)`
+
+Use Korean one-sentence descriptions in the ask-user-question `description`
+field. If ask-user-question is unavailable, ask a concise textual
+multiple-choice question. Use these theme options:
+
+- `auto (자동 추천)` — 문서 장르, 청중, 이미지 성격을 보고 가장 맞는 테마를 고른다.
+- `editorial-noir (다크 매거진)` — 뉴스 인사이트, 에세이, 실사/시네마틱 덱에 맞는 어두운 매거진 스타일.
+  Canva로 옮겨도 React 텍스트와 일반 이미지 구조가 유지되어 비교적 안정적이다.
+- `paper-press (종이 리포트)` — 리포트, 강의안, 긴 한국어 설명에 맞는 밝은 인쇄물 스타일.
+- `neon-terminal (터미널)` — 개발자 데모, CLI/툴링, 코드 설명에 맞는 어두운 터미널 스타일.
+- `neo-brutalism (네오 브루탈리즘)` — 굵은 검정 테두리, 강한 그림자, 선명한 색으로
+  강한 인상을 주는 스타일. 프롬프트 가이드, 제품 데모, 시각적으로 강한 덱에 적합하다. 참고 슬라이드:
+  `apps/demo/slides/gpt-image-2-prompt-cheatsheet/index.tsx` and
+  `apps/demo/slides/open-slide-launch/index.tsx`.
+- `research-brief (연구 브리프)` — 절제된 선, 표, 차트, 설명형 레이아웃에 맞는
+  밝은 연구/교육 스타일. 기술 개념 설명과 분석형 덱에 적합하다. 참고 슬라이드:
+  `apps/demo/slides/llm-fundamentals/index.tsx` and
+  `apps/demo/slides/ssh-explained/index.tsx`.
+- `vercel-minimal (미니멀 제품)` — 흰 배경, 얇은 선, 시스템 다이어그램 중심의
+  미니멀 제품/엔지니어링 스타일. 웹 플랫폼과 인프라 설명에 적합하다. 참고 슬라이드:
+  `apps/demo/slides/nextjs-ppr-cache/index.tsx`.
+- `raycast-dark-product (다크 제품)` — 어두운 SaaS/제품 런칭 느낌, UI 패널과
+  붉은 accent가 어울리는 스타일. API, 앱, 개발자 제품 설명에 적합하다. 참고 슬라이드:
+  `apps/demo/slides/raycast-api/index.tsx`.
+- `photo-editorial-tech (실사 테크 매거진)` — 실사 PNG 이미지와 절제된 텍스트를
+  쓰는 테크 매거진 스타일. 뉴스 인사이트, AI 전략, 시네마틱 기술 서사에 적합하다. 참고 슬라이드:
+  `apps/demo/slides/harness-engineering-ko/index.tsx`.
 
 ## Workflow
 
@@ -73,11 +109,16 @@ theme options:
    - one idea per page
    - top-level `export const design: DesignSystem = { ... }`
    - Korean-safe typography when the note is Korean
-   - if a non-`auto` theme is selected, read `themes/<theme-id>.md` before
-     writing JSX and apply its palette, typography, layout, components, and
-     motion philosophy
-   - if `auto` is selected, inspect available `themes/*.md`, pick one explicit
-     theme, and state the selected theme in the final output
+   - if a non-`auto` official theme is selected, read `themes/<theme-id>.md`
+     before writing JSX and apply its palette, typography, layout, components,
+     and motion philosophy
+   - if a demo-derived theme is selected and no `themes/<theme-id>.md` exists,
+     read the listed demo source slide first and extract its palette,
+     typography, layout rhythm, component treatment, and motion rules before
+     writing JSX
+   - if `auto` is selected, inspect available official themes and demo-derived
+     theme sources, pick one explicit theme, and state the selected theme in
+     the final output
 5. Use `create-slide-image-prompts` for exactly the requested number of
    generated image slots, unless the source note provides enough real assets to
    make generation unnecessary:
