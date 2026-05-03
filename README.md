@@ -10,7 +10,7 @@
 - Codex CLI 같은 코딩 에이전트에게 Markdown/Obsidian 문서 경로를 주고 슬라이드 생성
 - Web UI에서 슬라이드 목록, 미리보기, 발표 모드, 에셋 관리
 - HTML, PDF, PPTX 다운로드
-- Canva Connect API로 PPTX를 Canva에 전달하고 Canva에서 수정
+- Canva Connect API로 PPTX를 Canva에 전달하고 Canva에서 후속 편집
 - 한글 문서와 한글 발표 자료에 맞춘 렌더링 기본값
 - 네오브루탈리즘 스타일 Web UI
 
@@ -95,7 +95,9 @@ export default openSlideConfig;
 
 Download 메뉴에서 `Export as PPTX`를 선택하면 `.pptx` 파일이 다운로드됩니다.
 
-현재 PPTX는 각 React 슬라이드를 이미지로 렌더링해 한 장씩 넣는 방식입니다. 그래서 PowerPoint와 Canva에서 열기 안정성이 높고 디자인 보존이 좋습니다. 다만 PPTX 안에서 텍스트 박스를 직접 편집하는 방식은 아닙니다. 텍스트 수정은 Canva에서 디자인 위에 다시 편집하거나, 원본 React 슬라이드를 수정한 뒤 다시 export하는 방식이 맞습니다.
+현재 PPTX는 각 React 슬라이드를 이미지로 렌더링해 한 장씩 넣는 방식입니다. PowerPoint와 Canva에서 열기 안정성이 높고, Master Of Slide의 `slide.design` 토큰도 캡처 과정에 적용되어 배경색, 글자색, accent, 폰트 기반 시각 스타일이 유지됩니다.
+
+다만 PPTX 안의 모든 텍스트와 도형이 PowerPoint/Canva의 개별 편집 객체로 변환되는 방식은 아닙니다. 텍스트 수정은 Canva에서 디자인 위에 새 텍스트를 얹어 보정하거나, 원본 React 슬라이드를 수정한 뒤 다시 export하는 흐름이 가장 안정적입니다.
 
 ## Canva 연결 흐름
 
@@ -122,6 +124,8 @@ http://127.0.0.1:5173/api/canva/callback
 12. 다시 Download 메뉴에서 `Open in Canva`를 선택합니다.
 
 저장된 값은 로컬 워크스페이스의 `.env` 파일에 저장됩니다. `.env`는 GitHub에 올리면 안 됩니다.
+
+Canva에서 열리는 결과물은 Master Of Slide의 시각 스타일을 담은 PPTX를 Canva Design Import로 가져온 것입니다. Canva 안에서 열리더라도 Master Of Slide의 테마가 Canva의 네이티브 Brand Kit, 템플릿, 편집 가능한 테마 객체로 자동 변환되는 것은 아닙니다. 현재 목표는 “Canva에서 열 수 있고 후속 디자인 작업을 이어갈 수 있는 시각적으로 보존된 슬라이드”입니다.
 
 ## Canva CLI / Connect API 참고
 
