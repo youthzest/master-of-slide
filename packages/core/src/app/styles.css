@@ -1,0 +1,408 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans:
+    "Geist Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic",
+    -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading:
+    "Arial Black", "Geist Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo",
+    "Malgun Gothic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-serif:
+    ui-serif, "New York", "Iowan Old Style", "Apple Garamond", "Big Caslon", "Charter", Georgia,
+    serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "Menlo", "Cascadia Code", monospace;
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-hairline: var(--hairline);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-canvas: var(--canvas);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.85);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --shadow-edge: 4px 4px 0 var(--foreground);
+  --shadow-floating: 7px 7px 0 var(--foreground);
+  --shadow-overlay: 10px 10px 0 var(--foreground);
+}
+
+:root {
+  --background: oklch(0.965 0.055 96);
+  --foreground: oklch(0.13 0.012 260);
+  --canvas: oklch(0.92 0.045 95);
+
+  --card: oklch(0.995 0.01 95);
+  --card-foreground: oklch(0.13 0.012 260);
+  --popover: oklch(0.995 0.01 95);
+  --popover-foreground: oklch(0.13 0.012 260);
+
+  --primary: oklch(0.13 0.012 260);
+  --primary-foreground: oklch(0.965 0.055 96);
+  --secondary: oklch(0.88 0.17 88);
+  --secondary-foreground: oklch(0.13 0.012 260);
+  --muted: oklch(0.88 0.03 250);
+  --muted-foreground: oklch(0.34 0.02 260);
+  --accent: oklch(0.83 0.16 200);
+  --accent-foreground: oklch(0.13 0.012 260);
+  --destructive: oklch(0.61 0.22 30);
+
+  --border: oklch(0.13 0.012 260);
+  --hairline: oklch(0.13 0.012 260);
+  --input: oklch(0.13 0.012 260);
+  --ring: oklch(0.61 0.22 30);
+
+  --brand: oklch(0.62 0.22 30);
+  --brand-foreground: oklch(0.99 0.02 96);
+  --brand-soft: oklch(0.88 0.17 88);
+
+  --chart-1: oklch(0.62 0.22 30);
+  --chart-2: oklch(0.83 0.16 200);
+  --chart-3: oklch(0.88 0.17 88);
+  --chart-4: oklch(0.64 0.17 145);
+  --chart-5: oklch(0.72 0.16 320);
+
+  --radius: 0.125rem;
+
+  --sidebar: oklch(0.88 0.17 88);
+  --sidebar-foreground: oklch(0.13 0.012 260);
+  --sidebar-primary: oklch(0.13 0.012 260);
+  --sidebar-primary-foreground: oklch(0.965 0.055 96);
+  --sidebar-accent: oklch(0.83 0.16 200);
+  --sidebar-accent-foreground: oklch(0.13 0.012 260);
+  --sidebar-border: oklch(0.13 0.012 260);
+  --sidebar-ring: oklch(0.61 0.22 30);
+}
+
+.dark {
+  --background: oklch(0.18 0.02 260);
+  --foreground: oklch(0.96 0.04 96);
+  --canvas: oklch(0.22 0.02 260);
+
+  --card: oklch(0.26 0.025 260);
+  --card-foreground: oklch(0.96 0.04 96);
+  --popover: oklch(0.26 0.025 260);
+  --popover-foreground: oklch(0.96 0.04 96);
+
+  --primary: oklch(0.96 0.04 96);
+  --primary-foreground: oklch(0.16 0.02 260);
+  --secondary: oklch(0.76 0.16 88);
+  --secondary-foreground: oklch(0.16 0.02 260);
+  --muted: oklch(0.31 0.025 260);
+  --muted-foreground: oklch(0.78 0.04 96);
+  --accent: oklch(0.73 0.15 200);
+  --accent-foreground: oklch(0.16 0.02 260);
+  --destructive: oklch(0.68 0.22 30);
+
+  --border: oklch(0.96 0.04 96);
+  --hairline: oklch(0.96 0.04 96);
+  --input: oklch(0.96 0.04 96);
+  --ring: oklch(0.78 0.16 88);
+
+  --brand: oklch(0.68 0.22 30);
+  --brand-foreground: oklch(0.16 0.02 260);
+  --brand-soft: oklch(0.76 0.16 88);
+
+  --chart-1: oklch(0.66 0.19 28);
+  --chart-2: oklch(0.7 0.1 60);
+  --chart-3: oklch(0.65 0.08 245);
+  --chart-4: oklch(0.65 0.12 160);
+  --chart-5: oklch(0.6 0.04 60);
+
+  --sidebar: oklch(0.28 0.09 285);
+  --sidebar-foreground: oklch(0.96 0.04 96);
+  --sidebar-primary: oklch(0.96 0.04 96);
+  --sidebar-primary-foreground: oklch(0.16 0.02 260);
+  --sidebar-accent: oklch(0.73 0.15 200);
+  --sidebar-accent-foreground: oklch(0.16 0.02 260);
+  --sidebar-border: oklch(0.96 0.04 96);
+  --sidebar-ring: oklch(0.78 0.16 88);
+}
+
+/* Tabular numerics — pages, counts, hex values, slider readouts.
+   Declared as a Tailwind v4 `@utility` so it can be `@apply`d (e.g. by
+   .folio below) and used as a className token. */
+@utility nums {
+  font-feature-settings:
+    "tnum" on,
+    "cv11" on;
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings:
+      "ss01" on,
+      "cv11" on,
+      "calt" on;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "ss01" on,
+      "cv11" on,
+      "calt" on,
+      "tnum" off;
+    letter-spacing: 0;
+  }
+  html:lang(ko) body {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    line-break: strict;
+  }
+  html:lang(ko) [data-osd-canvas] {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    line-break: strict;
+    letter-spacing: 0;
+  }
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--foreground);
+  }
+}
+
+@layer components {
+  /*
+   * Eyebrow label — the single typographic gesture used for *every* section
+   * label across the app. Tracked-out small caps in muted ink.
+   */
+  .eyebrow {
+    @apply font-sans text-[10px] font-semibold uppercase text-muted-foreground;
+    letter-spacing: 0.14em;
+  }
+
+  /* Hairline divider — 0.5px on retina, snaps to 1px elsewhere. */
+  .hairline {
+    background: var(--hairline);
+  }
+
+  .paper {
+    position: relative;
+    isolation: isolate;
+  }
+  .paper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, oklch(0 0 0 / 0.06) 1px, transparent 1px),
+      linear-gradient(0deg, oklch(0 0 0 / 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 0;
+    mix-blend-mode: multiply;
+  }
+  .dark .paper::before {
+    opacity: 0.3;
+    mix-blend-mode: normal;
+  }
+  .paper > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Numeric folio-style page count. */
+  .folio {
+    @apply nums font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground;
+  }
+}
+
+/*
+ * Comment input cue — kept from the original design but retoned to match
+ * the new palette (warm vermillion + amber instead of the AI-classic
+ * blue/violet halo). Plays once on first open, then settles.
+ */
+@property --comment-cue-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.comment-cue {
+  position: relative;
+  isolation: isolate;
+}
+
+.comment-cue::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--radius-md) + 1px);
+  padding: 1.25px;
+  background: conic-gradient(
+    from var(--comment-cue-angle),
+    transparent 0deg,
+    transparent 250deg,
+    oklch(0.78 0.14 60 / 0.55) 295deg,
+    oklch(0.62 0.2 28 / 0.85) 325deg,
+    oklch(0.78 0.14 60 / 0.55) 350deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+  animation: comment-cue-trace 1500ms cubic-bezier(0.22, 0.61, 0.36, 1) 220ms 1 both;
+}
+
+.comment-cue::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: calc(var(--radius-md) + 10px);
+  background:
+    radial-gradient(80% 60% at 30% 50%, oklch(0.62 0.2 28 / 0.18), transparent 70%),
+    radial-gradient(70% 60% at 75% 60%, oklch(0.78 0.14 60 / 0.16), transparent 70%);
+  filter: blur(14px);
+  opacity: 0;
+  z-index: -1;
+  pointer-events: none;
+  animation: comment-cue-halo 1700ms ease-out 180ms 1 both;
+}
+
+@keyframes comment-cue-trace {
+  0% {
+    --comment-cue-angle: 0deg;
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    --comment-cue-angle: 360deg;
+    opacity: 0;
+  }
+}
+
+@keyframes comment-cue-halo {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment-cue::before,
+  .comment-cue::after {
+    animation: none;
+  }
+}
+
+[data-osd-freeze-motion],
+[data-osd-freeze-motion] *,
+[data-osd-freeze-motion] *::before,
+[data-osd-freeze-motion] *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: Thumbnail previews must override arbitrary slide-authored motion, including inline styles. */
+  animation-duration: 1ms !important;
+  /* biome-ignore lint/complexity/noImportantStyles: Thumbnail previews must override arbitrary slide-authored motion, including inline styles. */
+  animation-delay: 0s !important;
+  /* biome-ignore lint/complexity/noImportantStyles: Thumbnail previews must override arbitrary slide-authored motion, including inline styles. */
+  animation-iteration-count: 1 !important;
+  /* biome-ignore lint/complexity/noImportantStyles: Thumbnail previews must override arbitrary slide-authored motion, including inline styles. */
+  animation-fill-mode: forwards !important;
+  /* biome-ignore lint/complexity/noImportantStyles: Thumbnail previews must override arbitrary slide-authored motion, including inline styles. */
+  transition: none !important;
+  /* biome-ignore lint/complexity/noImportantStyles: Thumbnail previews must override arbitrary slide-authored motion, including inline styles. */
+  scroll-behavior: auto !important;
+  /* biome-ignore lint/complexity/noImportantStyles: Thumbnail previews must override arbitrary slide-authored motion, including inline styles. */
+  view-transition-name: none !important;
+}
+
+/*
+ * Custom scrollbar — slim, ink-on-paper. Removes the chunky default that
+ * fights the calm surfaces.
+ */
+@media (pointer: fine) {
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: oklch(0 0 0 / 0.1);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: oklch(0 0 0 / 0.18);
+    background-clip: content-box;
+  }
+  .dark *::-webkit-scrollbar-thumb {
+    background: oklch(1 0 0 / 0.1);
+    background-clip: content-box;
+  }
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: oklch(1 0 0 / 0.18);
+    background-clip: content-box;
+  }
+}

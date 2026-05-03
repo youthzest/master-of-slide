@@ -1,0 +1,40 @@
+import config from 'virtual:open-slide/config';
+import { useEffect } from 'react';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { Toaster } from './components/ui/sonner';
+import { Home } from './routes/home';
+import { Presenter } from './routes/presenter';
+import { Slide } from './routes/slide';
+
+export function App() {
+  useEffect(() => {
+    const previousLang = document.documentElement.lang;
+    document.documentElement.lang = config.lang;
+    return () => {
+      document.documentElement.lang = previousLang;
+    };
+  }, []);
+
+  return (
+    <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+      <Routes>
+        <Route path="/" element={config.build.showSlideBrowser ? <Home /> : <NotFound />} />
+        <Route path="/s/:slideId" element={<Slide />} />
+        <Route path="/s/:slideId/presenter" element={<Presenter />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster />
+    </BrowserRouter>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="grid h-screen place-items-center bg-background px-6 text-center text-foreground">
+      <div>
+        <p className="folio">404 · not found</p>
+        <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight">Page not found</h1>
+      </div>
+    </div>
+  );
+}
