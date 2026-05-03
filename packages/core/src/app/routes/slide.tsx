@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAssets } from '@/lib/assets';
+import { type AssetEntry, useAssets } from '@/lib/assets';
 import { useFolders } from '@/lib/folders';
 import { useWheelPageNavigation } from '@/lib/use-wheel-page-navigation';
 import { cn } from '@/lib/utils';
@@ -79,10 +79,16 @@ export function Slide() {
   const [playing, setPlaying] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [logoInserting, setLogoInserting] = useState(false);
+  const [logoAssetOpen, setLogoAssetOpen] = useState(false);
   const [designOpen, setDesignOpen] = useState(false);
   const [canvaConfigOpen, setCanvaConfigOpen] = useState(false);
   const { renameSlide } = useFolders();
-  const { upload: uploadAsset, available: assetsAvailable } = useAssets(slideId);
+  const {
+    upload: uploadAsset,
+    assets,
+    loading: assetsLoading,
+    available: assetsAvailable,
+  } = useAssets(slideId);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const logoTargetRef = useRef<LogoTarget>(0);
   const slideViewportRef = useRef<HTMLElement>(null);
@@ -229,6 +235,33 @@ export function Slide() {
     logoTargetRef.current = target;
     logoInputRef.current?.click();
   };
+  const pickAssetLogo = (target: LogoTarget) => {
+    logoTargetRef.current = target;
+    setLogoAssetOpen(true);
+  };
+  const insertLogoAsset = async (asset: AssetEntry, target: LogoTarget) => {
+    setLogoInserting(true);
+    try {
+      const res = await fetch(`/__slides/${slideId}/logo`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          assetPath: `./assets/${asset.name}`,
+          page: target,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? `Logo insert failed (${res.status}).`);
+      setLogoAssetOpen(false);
+      toast.success(
+        target === 'all' ? 'Logo inserted on all pages.' : `Logo inserted on slide ${index + 1}.`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Logo insert failed');
+    } finally {
+      setLogoInserting(false);
+    }
+  };
   const insertLogo = async (file: File, target: LogoTarget) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Choose an image file for the logo.');
@@ -339,11 +372,25 @@ export function Slide() {
                     <DropdownMenuContent align="end" className="min-w-[180px]">
                       <DropdownMenuItem disabled={logoInserting} onSelect={() => pickLogo(index)}>
                         <ImagePlus />
-                        Current page
+                        Upload to current page
                       </DropdownMenuItem>
                       <DropdownMenuItem disabled={logoInserting} onSelect={() => pickLogo('all')}>
                         <ImagePlus />
-                        All pages
+                        Upload to all pages
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={logoInserting}
+                        onSelect={() => pickAssetLogo(index)}
+                      >
+                        <ImagePlus />
+                        Asset to current page
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={logoInserting}
+                        onSelect={() => pickAssetLogo('all')}
+                      >
+                        <ImagePlus />
+                        Asset to all pages
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -603,6 +650,17 @@ export function Slide() {
               toast.message('Finish Canva login, then choose Open in Canva.');
             }}
           />
+          <LogoAssetDialog
+            open={logoAssetOpen}
+            slideId={slideId}
+            assets={assets}
+            loading={assetsLoading}
+            inserting={logoInserting}
+            target={logoTargetRef.current}
+            currentPage={index}
+            onOpenChange={setLogoAssetOpen}
+            onPick={(asset) => insertLogoAsset(asset, logoTargetRef.current)}
+          />
         </div>
       </InspectorProvider>
     </HistoryProvider>
@@ -791,6 +849,87 @@ function SlideWheelNavigation({
   });
 
   return null;
+}
+
+function LogoAssetDialog({
+  open,
+  slideId,
+  assets,
+  loading,
+  inserting,
+  target,
+  currentPage,
+  onOpenChange,
+  onPick,
+}: {
+  open: boolean;
+  slideId: string;
+  assets: AssetEntry[];
+  loading: boolean;
+  inserting: boolean;
+  target: LogoTarget;
+  currentPage: number;
+  onOpenChange: (open: boolean) => void;
+  onPick: (asset: AssetEntry) => void;
+}) {
+  const images = assets.filter((asset) => asset.mime.startsWith('image/'));
+  const targetLabel = target === 'all' ? 'all pages' : `slide ${currentPage + 1}`;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="font-black tracking-normal">Choose logo asset</DialogTitle>
+          <DialogDescription>
+            Pick an image from <span className="font-mono">slides/{slideId}/assets/</span> for{' '}
+            {targetLabel}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto">
+          {loading ? (
+            <p className="px-1 py-6 text-center text-xs text-muted-foreground">Loading...</p>
+          ) : images.length === 0 ? (
+            <p className="px-1 py-6 text-center text-xs text-muted-foreground">
+              No image assets yet. Use Logo → Upload, or add files from the Assets tab.
+            </p>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+              {images.map((asset) => (
+                <button
+                  key={asset.name}
+                  type="button"
+                  disabled={inserting}
+                  onClick={() => onPick(asset)}
+                  className={cn(
+                    'group flex flex-col overflow-hidden rounded-[4px] border-2 border-foreground bg-card text-left shadow-[4px_4px_0_var(--foreground)] transition-[box-shadow,transform]',
+                    'hover:-translate-x-px hover:-translate-y-px hover:shadow-[6px_6px_0_var(--foreground)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
+                  )}
+                >
+                  <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-[repeating-conic-gradient(theme(colors.muted)_0_25%,transparent_0_50%)] bg-[length:12px_12px]">
+                    <img
+                      src={asset.url}
+                      alt=""
+                      className="size-full object-contain"
+                      draggable={false}
+                    />
+                  </div>
+                  <div className="min-w-0 border-t-2 border-foreground px-2 py-1.5">
+                    <div className="truncate text-[11px] font-black" title={asset.name}>
+                      {asset.name}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function InlineTitleEditor({
