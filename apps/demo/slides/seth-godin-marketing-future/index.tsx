@@ -22,6 +22,8 @@ const line = '#2a2620';
 const soft = '#24201a';
 const padX = 120;
 const padY = 96;
+const displayFont = design.fonts.display;
+const bodyFont = design.fonts.body;
 
 const fill: CSSProperties = {
   width: '100%',
@@ -29,22 +31,12 @@ const fill: CSSProperties = {
   position: 'relative',
   overflow: 'hidden',
   boxSizing: 'border-box',
-  background: 'var(--osd-bg)',
-  color: 'var(--osd-text)',
-  fontFamily: 'var(--osd-font-body)',
+  background: design.palette.bg,
+  color: text,
+  fontFamily: bodyFont,
   wordBreak: 'keep-all',
   overflowWrap: 'anywhere',
 };
-
-const css = `
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.fade-up { animation: fadeUp 600ms ease-out both; }
-`;
-
-const Style = () => <style>{css}</style>;
 
 const Footer = ({ page, section = 'Marketing Future' }: { page: number; section?: string }) => (
   <div
@@ -78,7 +70,7 @@ const Eyebrow = ({ children }: { children: ReactNode }) => (
       fontWeight: 700,
       letterSpacing: '0.22em',
       textTransform: 'uppercase',
-      color: 'var(--osd-accent)',
+      color: accent,
       marginBottom: 30,
     }}
   >
@@ -97,7 +89,7 @@ const Title = ({
 }) => (
   <h2
     style={{
-      fontFamily: 'var(--osd-font-display)',
+      fontFamily: displayFont,
       fontSize: size,
       fontWeight: 800,
       lineHeight: 1.08,
@@ -136,7 +128,6 @@ const Shell = ({
   children: ReactNode;
 }) => (
   <div style={{ ...fill, padding: `${padY}px ${padX}px` }}>
-    <Style />
     <div
       aria-hidden
       style={{
@@ -158,7 +149,7 @@ const Quote = ({ children }: { children: ReactNode }) => (
     style={{
       borderLeft: `5px solid ${accent}`,
       paddingLeft: 34,
-      fontFamily: 'var(--osd-font-display)',
+      fontFamily: displayFont,
       fontSize: 54,
       lineHeight: 1.25,
       color: text,
@@ -174,7 +165,7 @@ const Metric = ({ label, value }: { label: string; value: string }) => (
     <div
       style={{
         color: accent,
-        fontFamily: 'var(--osd-font-display)',
+        fontFamily: displayFont,
         fontSize: 62,
         lineHeight: 1,
         fontWeight: 800,
@@ -200,13 +191,12 @@ const Cover: Page = () => (
       padding: `${padY}px ${padX}px`,
     }}
   >
-    <Style />
     <div style={{ alignSelf: 'center' }}>
       <Eyebrow>Seth Godin · Learning Note</Eyebrow>
       <h1
         style={{
-          fontFamily: 'var(--osd-font-display)',
-          fontSize: 'var(--osd-size-hero)',
+          fontFamily: displayFont,
+          fontSize: 144,
           fontWeight: 800,
           lineHeight: 1.02,
           letterSpacing: '-0.02em',
@@ -274,7 +264,7 @@ const Permission: Page = () => (
         >
           <div
             style={{
-              fontFamily: 'var(--osd-font-display)',
+              fontFamily: displayFont,
               color: accent,
               fontSize: 42,
               fontWeight: 800,
@@ -309,7 +299,6 @@ const BrandPromise: Page = () => (
       padding: `${padY}px ${padX}px`,
     }}
   >
-    <Style />
     <img
       src={brandPromise}
       alt="약속과 일관성을 상징하는 어두운 책상 위 오브젝트"
@@ -354,7 +343,7 @@ const Consistency: Page = () => (
           style={{
             marginTop: 24,
             fontSize: 58,
-            fontFamily: 'var(--osd-font-display)',
+            fontFamily: displayFont,
             color: text,
           }}
         >
@@ -376,7 +365,7 @@ const Consistency: Page = () => (
           style={{
             marginTop: 24,
             fontSize: 58,
-            fontFamily: 'var(--osd-font-display)',
+            fontFamily: displayFont,
             color: text,
           }}
         >
@@ -407,10 +396,7 @@ const Remarkable: Page = () => (
       }}
     >
       {['특별한 경험', '기억되는 차이', '전달 가능한 이야기'].map((item) => (
-        <span
-          key={item}
-          style={{ fontSize: 38, color: text, fontFamily: 'var(--osd-font-display)' }}
-        >
+        <span key={item} style={{ fontSize: 38, color: text, fontFamily: displayFont }}>
           {item}
         </span>
       ))}
@@ -424,7 +410,7 @@ const AiStrategy: Page = () => (
     <Title>AI를 더 싸게 쓰는 팀과 더 좋게 쓰는 팀은 다른 미래를 만든다.</Title>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 52, marginTop: 78 }}>
       <div style={{ padding: 44, background: surface }}>
-        <div style={{ fontSize: 48, fontFamily: 'var(--osd-font-display)', color: muted }}>
+        <div style={{ fontSize: 48, fontFamily: displayFont, color: muted }}>
           Race to the bottom
         </div>
         <p style={{ fontSize: 32, lineHeight: 1.5, color: '#b7aa96' }}>
@@ -432,7 +418,7 @@ const AiStrategy: Page = () => (
         </p>
       </div>
       <div style={{ padding: 44, background: soft, borderTop: `2px solid ${accent}` }}>
-        <div style={{ fontSize: 48, fontFamily: 'var(--osd-font-display)', color: accent }}>
+        <div style={{ fontSize: 48, fontFamily: displayFont, color: accent }}>
           Race to the better
         </div>
         <p style={{ fontSize: 32, lineHeight: 1.5, color: '#b7aa96' }}>
@@ -472,7 +458,7 @@ const CustomerChoice: Page = () => (
             paddingTop: 28,
             color: i === 1 ? accent : text,
             fontSize: 36,
-            fontFamily: 'var(--osd-font-display)',
+            fontFamily: displayFont,
           }}
         >
           {item}
