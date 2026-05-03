@@ -12,8 +12,10 @@ You are authoring **slides** in this repo. Every slide is arbitrary React code t
 
 ## Which skill to use
 
+- **One-command Markdown deck** — use the `slide` skill when the user invokes `/slide <path-to.md>`. It reads the Markdown/Obsidian note, creates a Master Of Slide deck, and uses image prompt guidance when generated visuals would improve the deck.
 - **Drafting a new deck** — use the `create-slide` skill. It walks through scoping questions, structure, and hand-off.
 - **Drafting from Markdown / Obsidian** — use the `create-slide-from-markdown` skill when the user gives a `.md` path. It reads the note, resolves common Obsidian syntax, and can use generated bitmap assets when available.
+- **Slide image prompts** — use the `create-slide-image-prompts` skill when a deck needs generated hero images, infographics, thumbnails, UI mockups, product visuals, or placeholders.
 - **Applying inspector comments** (`@slide-comment` markers in a page) — use the `apply-comments` skill.
 - **Creating or extracting a theme** — use the `create-theme` skill. Themes live as markdown under `themes/<id>.md` and are read by `create-slide` before authoring.
 - **Any other slide edit** — read the `slide-authoring` skill before writing. It is the technical reference for everything inside `slides/<id>/`: file contract, the 1920×1080 canvas, type scale, palette, layout, assets, self-review checklist, and anti-patterns. `create-slide` and `apply-comments` both defer to it for the *how*.

@@ -69,6 +69,22 @@ Codex CLI 같은 에이전트 환경에서 다음처럼 요청하면 됩니다.
 - 한글 원문이면 한글 친화 디자인과 문장 밀도 적용
 - 이미지 생성이 가능한 에이전트 환경이면 슬라이드 에셋 생성
 
+### `/slide` 스킬
+
+Master Of Slide 워크스페이스에는 `slide` 스킬도 포함됩니다. Claude Code나 Codex에서 아래처럼 요청하면 Markdown/Obsidian 문서를 읽어 바로 `slides/<id>/index.tsx`를 생성하는 흐름으로 들어갑니다.
+
+```text
+/slide /Users/me/Obsidian/Vault/Research/My Note.md
+```
+
+`slide` 스킬은 내부적으로 다음 스킬을 함께 사용하도록 설계되어 있습니다.
+
+- `create-slide-from-markdown`: Markdown/Obsidian 원문 분석
+- `slide-authoring`: 1920 × 1080 React 슬라이드 작성 규칙
+- `create-slide-image-prompts`: GPT Image 2 스타일의 이미지 프롬프트 생성
+
+Codex처럼 이미지 생성이 가능한 환경에서는 `create-slide-image-prompts`가 표지 히어로 이미지, 인포그래픽, 제품/브랜드 포스터, UI 목업 등에 맞는 프롬프트를 만들고, 가능하면 생성 이미지를 `slides/<id>/assets/`에 저장해 슬라이드에 배치합니다. 이미지 생성이 불가능한 환경에서는 같은 프롬프트를 `ImagePlaceholder` 힌트나 최종 안내에 남깁니다.
+
 ## 한글 최적화
 
 워크스페이스의 `open-slide.config.ts`에 `lang: 'ko'`를 설정합니다.
