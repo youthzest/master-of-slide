@@ -109,16 +109,17 @@ Web UI에서 설정하는 방법:
 4. `Open Canva Developer Portal` 버튼을 눌러 Canva 개발자 페이지로 이동합니다.
 5. Canva에서 Integration을 만들고 Client ID를 복사합니다.
 6. Client Secret을 생성해 복사합니다.
-7. Redirect URI에 아래 값을 등록합니다.
+7. 왼쪽 `Scopes` 메뉴에서 `design:content:write` 권한을 활성화합니다. PPTX를 Canva 디자인으로 가져오는 Design Import API에 필수입니다.
+8. `Authentication` 메뉴의 Authorized redirects에 아래 값을 등록합니다.
 
 ```text
-http://localhost:5173/api/canva/callback
+http://127.0.0.1:5173/api/canva/callback
 ```
 
-8. Web UI의 Canva Settings에 Client ID, Client Secret, Redirect URI를 입력합니다.
-9. `Save & Login`을 누릅니다.
-10. Canva 로그인/승인을 완료합니다.
-11. 다시 Download 메뉴에서 `Open in Canva`를 선택합니다.
+9. Web UI의 Canva Settings에 Client ID, Client Secret, Redirect URI를 입력합니다.
+10. `Save & Login`을 누릅니다.
+11. Canva 로그인/승인을 완료합니다.
+12. 다시 Download 메뉴에서 `Open in Canva`를 선택합니다.
 
 저장된 값은 로컬 워크스페이스의 `.env` 파일에 저장됩니다. `.env`는 GitHub에 올리면 안 됩니다.
 

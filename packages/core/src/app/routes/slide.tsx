@@ -613,6 +613,7 @@ function CanvaConfigDialog({
             <li>Open Canva Developer Portal and create a new integration.</li>
             <li>Copy the Client ID from the configuration page.</li>
             <li>Generate and copy the Client Secret. It usually starts with cnvca.</li>
+            <li>Open Scopes and enable design:content:write.</li>
             <li>Add the Redirect URI below to the integration authentication settings.</li>
           </ol>
           <label
@@ -658,7 +659,7 @@ function CanvaConfigDialog({
               value={redirectUri}
               disabled={loading || saving}
               onChange={(e) => setRedirectUri(e.target.value)}
-              placeholder="http://localhost:5173/api/canva/callback"
+              placeholder="http://127.0.0.1:5173/api/canva/callback"
               className="border-2 border-foreground font-mono shadow-[3px_3px_0_var(--foreground)]"
             />
           </label>

@@ -156,6 +156,16 @@ export function canvaPlugin(opts: CanvaPluginOptions = {}): Plugin {
           }
 
           if (url.pathname === '/api/canva/callback') {
+            const error = url.searchParams.get('error');
+            const errorDescription = url.searchParams.get('error_description');
+            if (error) {
+              const detail =
+                error === 'invalid_scope'
+                  ? 'Canva rejected the requested scope. In Canva Developer Portal, open Scopes and enable design:content:write for this integration, then try Connect Canva again.'
+                  : (errorDescription ?? error);
+              return html(res, 400, detail);
+            }
+
             const code = url.searchParams.get('code');
             const state = url.searchParams.get('state');
             const auth = state
