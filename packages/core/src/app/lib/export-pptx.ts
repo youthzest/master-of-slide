@@ -1,5 +1,6 @@
 import { toPng } from 'html-to-image';
 import { createElement } from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { type DesignSystem, defaultDesign, designToCssVars } from './design';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, type SlideModule } from './sdk';
@@ -90,10 +91,13 @@ async function renderPagesToPng(
       container.appendChild(host);
 
       const root = createRoot(host);
-      root.render(createElement(Page));
-      await nextPaint();
+      flushSync(() => {
+        root.render(createElement(Page));
+      });
+      await nextPaint(2);
       await waitForImages(host);
       await waitForFonts();
+      await nextPaint();
 
       result.push(
         await toPng(host, {
@@ -113,8 +117,16 @@ async function renderPagesToPng(
   return result;
 }
 
-function nextPaint(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+function nextPaint(frames = 1): Promise<void> {
+  return new Promise((resolve) => {
+    const step = (remaining: number) => {
+      requestAnimationFrame(() => {
+        if (remaining <= 1) resolve();
+        else step(remaining - 1);
+      });
+    };
+    step(frames);
+  });
 }
 
 async function waitForFonts(): Promise<void> {
