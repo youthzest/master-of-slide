@@ -348,6 +348,29 @@ function formatJsxText(value: string): string {
   return value;
 }
 
+function formatJsxTextWithBreaks(value: string): string {
+  const parts = value.split(/\r?\n/);
+  if (parts.length === 1) return formatJsxText(value);
+  return parts
+    .map((part) => formatJsxText(part))
+    .reduce((acc, part, i) => (i === 0 ? part : `${acc}\n<br />\n${part}`), '');
+}
+
+function isStaticTextChild(child: AstNode): boolean {
+  if (child.type === 'JSXText') return true;
+  if (child.type === 'JSXExpressionContainer') {
+    const expr = (child as unknown as { expression: AstNode }).expression;
+    return expr.type === 'StringLiteral' || expr.type === 'NumericLiteral';
+  }
+  if (child.type === 'JSXElement') {
+    const opening = (child as unknown as { openingElement?: AstNode }).openingElement;
+    const name = (opening as unknown as { name?: { type?: string; name?: string } } | undefined)
+      ?.name;
+    return name?.type === 'JSXIdentifier' && name.name === 'br';
+  }
+  return false;
+}
+
 function buildTextSplice(element: AstNode, value: string): Splice | { error: string } {
   const children = (element as unknown as { children?: AstNode[] }).children ?? [];
   if (children.length === 0) {
@@ -362,8 +385,14 @@ function buildTextSplice(element: AstNode, value: string): Splice | { error: str
     return true;
   });
 
-  if (meaningful.length !== 1) {
+  if (meaningful.length !== 1 && !meaningful.every(isStaticTextChild)) {
     return { error: 'element has complex children' };
+  }
+
+  if (meaningful.length > 1) {
+    const first = children[0];
+    const last = children[children.length - 1];
+    return { from: first.start, to: last.end, text: formatJsxTextWithBreaks(value) };
   }
 
   const child = meaningful[0];

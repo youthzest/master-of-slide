@@ -793,7 +793,7 @@ function CommentsSection({
 
 function readSnapshot(el: HTMLElement): ElementSnapshot {
   const cs = getComputedStyle(el);
-  const text = isSimpleTextElement(el) ? (el.textContent ?? '') : null;
+  const text = readEditableText(el);
   const imageSrc =
     el.tagName === 'IMG'
       ? (el as HTMLImageElement).currentSrc || (el as HTMLImageElement).src || null
@@ -823,10 +823,32 @@ function readSnapshot(el: HTMLElement): ElementSnapshot {
   };
 }
 
-function isSimpleTextElement(el: HTMLElement): boolean {
-  if (el.childNodes.length === 0) return true;
-  if (el.childNodes.length === 1 && el.firstChild?.nodeType === Node.TEXT_NODE) return true;
-  return false;
+function readEditableText(el: HTMLElement): string | null {
+  if (el.childNodes.length === 0) return '';
+
+  let text = '';
+  let hasMeaningfulText = false;
+  for (const node of Array.from(el.childNodes)) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const value = node.textContent ?? '';
+      if (value.trim()) hasMeaningfulText = true;
+      text += value;
+      continue;
+    }
+    if (node instanceof HTMLBRElement) {
+      text = text.replace(/[ \t]*$/, '');
+      text += '\n';
+      continue;
+    }
+    return null;
+  }
+
+  const normalized = text
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .join('\n')
+    .trim();
+  return hasMeaningfulText ? normalized : '';
 }
 
 function rgbToHex(value: string): string | null {
