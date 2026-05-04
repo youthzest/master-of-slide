@@ -21,7 +21,8 @@
     "cli": "pnpm --filter @open-slide/cli",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "turbo run build --filter=@open-slide/core --filter=@open-slide/cli && changeset publish"
+    "release": "turbo run build --filter=@open-slide/core --filter=@open-slide/cli && changeset publish",
+    "install:agents": "node scripts/install-agent-workflow.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",

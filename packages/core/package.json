@@ -1,7 +1,7 @@
 {
   "name": "@open-slide/core",
   "version": "1.0.2",
-  "description": "Runtime and CLI for open-slide — write slides in slides/, we handle the rest.",
+  "description": "Runtime and CLI for Master Of Slide, based on open-slide with Korean, PPTX, Canva, and agent workflows.",
   "type": "module",
   "exports": {
     ".": {
@@ -44,7 +44,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/1weiho/open-slide.git",
+    "url": "git+https://github.com/reallygood83/master-of-slide.git",
     "directory": "packages/core"
   },
   "publishConfig": {

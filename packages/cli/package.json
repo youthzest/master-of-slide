@@ -1,7 +1,7 @@
 {
   "name": "@open-slide/cli",
   "version": "1.0.2",
-  "description": "Scaffold an open-slide workspace with Claude Code skills preconfigured.",
+  "description": "Scaffold a Master Of Slide workspace with Codex and Claude Code skills preconfigured.",
   "type": "module",
   "bin": {
     "open-slide": "dist/cli.js"
@@ -29,7 +29,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/1weiho/open-slide.git",
+    "url": "git+https://github.com/reallygood83/master-of-slide.git",
     "directory": "packages/cli"
   },
   "publishConfig": {

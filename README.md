@@ -36,6 +36,61 @@ pnpm install
 pnpm dev
 ```
 
+## GitHub 주소로 Codex / Claude에 설치하기
+
+Master Of Slide 저장소 주소:
+
+```text
+https://github.com/reallygood83/master-of-slide
+```
+
+Codex나 Claude Code에 위 주소를 주고 설치를 맡길 때는 아래처럼 요청하면 됩니다.
+
+```text
+https://github.com/reallygood83/master-of-slide 를 클론해서 설치해줘.
+설치 후 pnpm install:agents를 실행해서 slide 스킬과 /slide 명령도 전역에 설치해줘.
+```
+
+에이전트가 실행해야 하는 명령은 다음과 같습니다.
+
+```bash
+git clone https://github.com/reallygood83/master-of-slide.git
+cd master-of-slide
+pnpm install
+pnpm install:agents
+pnpm dev:demo
+```
+
+`pnpm install:agents`는 아래 파일을 전역 사용자 설정에 복사합니다.
+
+```text
+~/.codex/skills/slide/SKILL.md
+~/.codex/skills/slide-authoring/SKILL.md
+~/.codex/skills/create-slide-from-markdown/SKILL.md
+~/.codex/skills/create-slide-image-prompts/SKILL.md
+~/.claude/commands/slide.md
+```
+
+설치 후에는 Codex나 Claude Code를 다시 시작해야 새 스킬/명령이 보입니다.
+
+사용 예:
+
+```text
+$slide "/Users/me/Obsidian/Vault/Research/My Note.md"
+```
+
+Claude Code에서는 slash command로도 사용할 수 있습니다.
+
+```text
+/slide "/Users/me/Obsidian/Vault/Research/My Note.md"
+```
+
+참고:
+
+- Codex는 전역 skill을 `$slide` 또는 자연어 `slide ...` 요청으로 라우팅합니다.
+- Claude Code는 `~/.claude/commands/slide.md` 때문에 `/slide` 명령으로 표시됩니다.
+- repo 안에서만 쓸 경우에도 `.agents/skills/slide`와 `.claude/commands/slide.md`가 포함되어 있으므로, 저장소 루트에서 새 에이전트 세션을 열면 바로 사용할 수 있습니다.
+
 ## 기본 사용 흐름
 
 1. `slides/<slide-id>/index.tsx`에 슬라이드를 작성합니다.
