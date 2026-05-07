@@ -130,6 +130,7 @@ export function InspectorPanel() {
 
   if (!pinned) return null;
   const { s: pinSelected, n: pinSnapshot } = pinned;
+  const duplicateCount = countDuplicateAnchors(pinSelected.line, pinSelected.column);
 
   return (
     <PanelShell
@@ -143,6 +144,14 @@ export function InspectorPanel() {
             <span className="rounded-[3px] border border-hairline bg-card px-1.5 py-px font-mono text-[10.5px] text-foreground/85">
               &lt;{pinSelected.anchor.tagName.toLowerCase()}&gt;
             </span>
+            {duplicateCount > 1 && (
+              <span
+                className="rounded-[3px] border border-amber-500 bg-amber-100 px-1.5 py-px font-mono text-[10.5px] font-semibold text-amber-900"
+                title="이 요소는 컴포넌트로 정의되어 여러 곳에서 재사용 중입니다."
+              >
+                ×{duplicateCount}
+              </span>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -157,9 +166,28 @@ export function InspectorPanel() {
       }
       footer={<CommentsSection selected={pinSelected} onAdd={add} />}
     >
-      {pinSnapshot.text !== null && (
+      {duplicateCount > 1 && (
+        <Section title="⚠️ Shared component">
+          <p className="text-[11px] leading-relaxed text-amber-900">
+            This element renders <strong>{duplicateCount} times</strong> across the deck (it lives
+            inside a reusable component). Editing text or styles here will sync to <strong>every</strong>{' '}
+            instance. To change just one slide, copy the component into that slide's JSX inline first.
+          </p>
+        </Section>
+      )}
+
+      {pinSnapshot.text !== null ? (
         <Section title="Content">
           <ContentField snapshot={pinSnapshot} apply={apply} />
+        </Section>
+      ) : (
+        <Section title="Content">
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            This element wraps child elements (e.g. nested <code>&lt;span&gt;</code>,{' '}
+            <code>&lt;img&gt;</code>), so direct text editing would destroy that structure. Click on
+            the inner text element instead — typically a child <code>&lt;span&gt;</code> — and edit
+            it from there.
+          </p>
         </Section>
       )}
 
@@ -789,6 +817,17 @@ function CommentsSection({
       </div>
     </Section>
   );
+}
+
+// Source-loc anchors are emitted at JSX tag positions, so a component used N
+// times still resolves to one source location. Counting DOM matches lets the
+// inspector surface "this edit fans out to N instances" before the user is
+// surprised by the cascading change.
+function countDuplicateAnchors(line: number, column: number): number {
+  const root = document.querySelector('[data-inspector-root]');
+  if (!root) return 1;
+  const escaped = `${line}:${column}`.replace(/"/g, '\\"');
+  return root.querySelectorAll(`[data-slide-loc="${escaped}"]`).length || 1;
 }
 
 function readSnapshot(el: HTMLElement): ElementSnapshot {

@@ -5,13 +5,16 @@ import {
   ExternalLink,
   FileCode2,
   FileText,
+  Film,
   ImagePlus,
   Loader2,
   LogIn,
   Pencil,
   Play,
+  Mic2,
   Presentation,
   Settings,
+  Volume2,
 } from 'lucide-react';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -51,7 +54,9 @@ import { useFolders } from '@/lib/folders';
 import { useWheelPageNavigation } from '@/lib/use-wheel-page-navigation';
 import { cn } from '@/lib/utils';
 import { ClickNavZones } from '../components/click-nav-zones';
+import { AudioStudioDialog } from '../components/audio-studio-dialog';
 import { PdfProgressToast } from '../components/pdf-progress-toast';
+import { VoiceSettingsDialog } from '../components/voice-settings-dialog';
 import { Player } from '../components/player';
 import { SlideCanvas } from '../components/slide-canvas';
 import { ThumbnailRail } from '../components/thumbnail-rail';
@@ -64,7 +69,14 @@ import {
 } from '../lib/canva';
 import { exportSlideAsHtml } from '../lib/export-html';
 import { exportSlideAsPdf } from '../lib/export-pdf';
+import { exportSlideAsMp4 } from '../lib/export-mp4';
 import { exportSlideAsPptx } from '../lib/export-pptx';
+import {
+  buildScriptEntries,
+  downloadBlob as downloadScriptBlob,
+  entriesToPlainText,
+  entriesToSrt,
+} from '../lib/export-script';
 import type { SlideModule } from '../lib/sdk';
 import { loadSlide } from '../lib/slides';
 
@@ -82,6 +94,8 @@ export function Slide() {
   const [logoAssetOpen, setLogoAssetOpen] = useState(false);
   const [designOpen, setDesignOpen] = useState(false);
   const [canvaConfigOpen, setCanvaConfigOpen] = useState(false);
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  const [audioStudioOpen, setAudioStudioOpen] = useState(false);
   const { renameSlide } = useFolders();
   const {
     upload: uploadAsset,
@@ -491,6 +505,67 @@ export function Slide() {
                       Export as PPTX
                     </DropdownMenuItem>
                     {import.meta.env.DEV && (
+                      <DropdownMenuItem
+                        disabled={exporting}
+                        onSelect={async () => {
+                          if (!slide || exporting) return;
+                          setExporting(true);
+                          const id = toast.loading(
+                            'Rendering MP4… this can take a few minutes for long decks.',
+                          );
+                          try {
+                            await exportSlideAsMp4(slide, slideId, {
+                              fps: 30,
+                              fallbackDurationMs: 5000,
+                              onProgress: (phase, percent) => {
+                                toast.loading(`MP4: ${phase} (${Math.round(percent)}%)`, { id });
+                              },
+                            });
+                            toast.success('MP4 saved.', { id });
+                          } catch (err) {
+                            console.error('[open-slide] mp4 export failed', err);
+                            toast.error(
+                              err instanceof Error ? err.message : 'MP4 export failed',
+                              { id },
+                            );
+                          } finally {
+                            setExporting(false);
+                          }
+                        }}
+                      >
+                        <Film />
+                        Export as MP4 + script (.srt + .txt)
+                      </DropdownMenuItem>
+                    )}
+                    {import.meta.env.DEV && (
+                      <DropdownMenuItem
+                        disabled={exporting || !slide}
+                        onSelect={async () => {
+                          if (!slide) return;
+                          try {
+                            const entries = await buildScriptEntries(slide, slideId, {
+                              fallbackDurationMs: 5000,
+                              autoExtract: true,
+                            });
+                            downloadScriptBlob(entriesToSrt(entries), `${slideId}.srt`);
+                            downloadScriptBlob(
+                              entriesToPlainText(entries, slide.meta?.title ?? slideId),
+                              `${slideId}.script.txt`,
+                            );
+                            toast.success('Script saved (.srt + .txt).');
+                          } catch (err) {
+                            console.error('[open-slide] script export failed', err);
+                            toast.error(
+                              err instanceof Error ? err.message : 'Script export failed',
+                            );
+                          }
+                        }}
+                      >
+                        <FileText />
+                        Download script only (.srt + .txt)
+                      </DropdownMenuItem>
+                    )}
+                    {import.meta.env.DEV && (
                       <>
                         <DropdownMenuItem
                           disabled={exporting}
@@ -556,6 +631,24 @@ export function Slide() {
                         >
                           <Settings />
                           Canva Settings
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {import.meta.env.DEV && (
+                      <>
+                        <DropdownMenuItem
+                          disabled={exporting || !slide}
+                          onSelect={() => setAudioStudioOpen(true)}
+                        >
+                          <Mic2 />
+                          Audio Studio
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={exporting}
+                          onSelect={() => setVoiceSettingsOpen(true)}
+                        >
+                          <Volume2 />
+                          Voice Settings
                         </DropdownMenuItem>
                       </>
                     )}
@@ -649,6 +742,13 @@ export function Slide() {
             onConnected={() => {
               toast.message('Finish Canva login, then choose Open in Canva.');
             }}
+          />
+          <VoiceSettingsDialog open={voiceSettingsOpen} onOpenChange={setVoiceSettingsOpen} />
+          <AudioStudioDialog
+            open={audioStudioOpen}
+            onOpenChange={setAudioStudioOpen}
+            slide={slide}
+            slideId={slideId}
           />
           <LogoAssetDialog
             open={logoAssetOpen}

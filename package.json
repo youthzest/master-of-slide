@@ -22,7 +22,9 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "turbo run build --filter=@open-slide/core --filter=@open-slide/cli && changeset publish",
-    "install:agents": "node scripts/install-agent-workflow.mjs"
+    "install:agents": "node scripts/install-agent-workflow.mjs",
+    "refresh": "./scripts/update.sh",
+    "refresh:no-restart": "./scripts/update.sh --no-restart"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",

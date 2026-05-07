@@ -14,6 +14,10 @@ export type SlideModule = {
   // Index-aligned with `default`. Each entry is the speaker note for the
   // page at the same position. Used by Presenter View only.
   notes?: (string | undefined)[];
+  // Index-aligned with `default`. The TTS narration script for each page.
+  // Falls back to notes[i], then to auto-extracted visible text. Used by
+  // the Audio Studio and MP4 export.
+  narration?: (string | undefined)[];
 };
 
 export type FolderIcon = { type: 'emoji'; value: string } | { type: 'color'; value: string };

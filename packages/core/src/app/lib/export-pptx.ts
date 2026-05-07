@@ -63,7 +63,7 @@ export async function createPptxBlob(
   return new Blob([content], { type: PPTX_MIME });
 }
 
-async function renderPagesToPng(
+export async function renderPagesToPng(
   pages: NonNullable<SlideModule['default']>,
   design: DesignSystem,
 ): Promise<string[]> {
@@ -87,7 +87,13 @@ async function renderPagesToPng(
       host.style.width = `${CANVAS_WIDTH}px`;
       host.style.height = `${CANVAS_HEIGHT}px`;
       host.style.background = design.palette.bg;
-      Object.assign(host.style, designToCssVars(design));
+      // CSS custom properties must be set via setProperty(); bracket-style
+      // assignment through Object.assign silently fails in some engines and
+      // leaves var(--osd-*) references unresolved during PNG capture, which
+      // produced the "black text on dark bg" bug in PPTX/Canva export.
+      for (const [key, value] of Object.entries(designToCssVars(design))) {
+        host.style.setProperty(key, value);
+      }
       container.appendChild(host);
 
       const root = createRoot(host);
@@ -99,6 +105,7 @@ async function renderPagesToPng(
       await waitForFonts();
       await waitForAnimations(host);
       await nextPaint();
+      materializeComputedStyles(host);
 
       result.push(
         await toPng(host, {
@@ -118,6 +125,26 @@ async function renderPagesToPng(
   return result;
 }
 
+function materializeComputedStyles(root: HTMLElement): void {
+  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+  for (const el of elements) {
+    const computed = getComputedStyle(el);
+    el.style.fontFamily = computed.fontFamily;
+    el.style.fontSize = computed.fontSize;
+    el.style.fontWeight = computed.fontWeight;
+    el.style.lineHeight = computed.lineHeight;
+    el.style.letterSpacing = computed.letterSpacing;
+    el.style.color = computed.color;
+    el.style.backgroundColor = computed.backgroundColor;
+    el.style.borderTopColor = computed.borderTopColor;
+    el.style.borderRightColor = computed.borderRightColor;
+    el.style.borderBottomColor = computed.borderBottomColor;
+    el.style.borderLeftColor = computed.borderLeftColor;
+    el.style.boxShadow = computed.boxShadow;
+    el.style.borderRadius = computed.borderRadius;
+  }
+}
+
 function nextPaint(frames = 1): Promise<void> {
   return new Promise((resolve) => {
     const step = (remaining: number) => {
@@ -134,19 +161,59 @@ async function waitForFonts(): Promise<void> {
   if ('fonts' in document) await document.fonts.ready;
 }
 
-async function waitForAnimations(root: HTMLElement): Promise<void> {
-  const animations = root.getAnimations({ subtree: true });
+const ANIMATION_WAIT_TIMEOUT_MS = 1500;
+
+async function waitForAnimations(
+  root: HTMLElement,
+  timeoutMs = ANIMATION_WAIT_TIMEOUT_MS,
+): Promise<void> {
+  const animations = root.getAnimations?.({ subtree: true }) ?? [];
   if (animations.length === 0) return;
 
-  await Promise.all(
-    animations.map(async (animation) => {
+  // Looping animations (pulse, glow, blink, caret, drift, shimmer, …) never
+  // resolve `animation.finished`. Force them to a stable terminal frame before
+  // we wait so they do not hang the export.
+  for (const animation of animations) {
+    if (isLoopingAnimation(animation)) {
       try {
-        await animation.finished;
+        animation.finish();
       } catch {
-        // Ignore cancelled animations; the current rendered state is still safe to capture.
+        try {
+          animation.cancel();
+        } catch {
+          // Ignore — the current rendered frame is still safe to capture.
+        }
       }
-    }),
-  );
+    }
+  }
+
+  const remaining = root.getAnimations?.({ subtree: true }) ?? [];
+  if (remaining.length === 0) return;
+
+  await Promise.race([
+    Promise.all(
+      remaining.map((animation) =>
+        animation.finished.then(
+          () => undefined,
+          () => undefined,
+        ),
+      ),
+    ),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
+function isLoopingAnimation(animation: Animation): boolean {
+  const effect = animation.effect;
+  if (!effect) return false;
+  try {
+    const timing = effect.getComputedTiming();
+    if (timing.iterations === Infinity) return true;
+    if (timing.endTime === Infinity) return true;
+  } catch {
+    // Some browsers throw on getComputedTiming for cancelled effects.
+  }
+  return false;
 }
 
 async function waitForImages(root: HTMLElement): Promise<void> {
