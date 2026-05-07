@@ -12,6 +12,7 @@ import {
   Play,
   Presentation,
   Settings,
+  Volume2,
 } from 'lucide-react';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -52,6 +53,7 @@ import { useWheelPageNavigation } from '@/lib/use-wheel-page-navigation';
 import { cn } from '@/lib/utils';
 import { ClickNavZones } from '../components/click-nav-zones';
 import { PdfProgressToast } from '../components/pdf-progress-toast';
+import { VoiceSettingsDialog } from '../components/voice-settings-dialog';
 import { Player } from '../components/player';
 import { SlideCanvas } from '../components/slide-canvas';
 import { ThumbnailRail } from '../components/thumbnail-rail';
@@ -82,6 +84,7 @@ export function Slide() {
   const [logoAssetOpen, setLogoAssetOpen] = useState(false);
   const [designOpen, setDesignOpen] = useState(false);
   const [canvaConfigOpen, setCanvaConfigOpen] = useState(false);
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
   const { renameSlide } = useFolders();
   const {
     upload: uploadAsset,
@@ -559,6 +562,15 @@ export function Slide() {
                         </DropdownMenuItem>
                       </>
                     )}
+                    {import.meta.env.DEV && (
+                      <DropdownMenuItem
+                        disabled={exporting}
+                        onSelect={() => setVoiceSettingsOpen(true)}
+                      >
+                        <Volume2 />
+                        Voice Settings
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -650,6 +662,7 @@ export function Slide() {
               toast.message('Finish Canva login, then choose Open in Canva.');
             }}
           />
+          <VoiceSettingsDialog open={voiceSettingsOpen} onOpenChange={setVoiceSettingsOpen} />
           <LogoAssetDialog
             open={logoAssetOpen}
             slideId={slideId}
