@@ -63,7 +63,7 @@ export async function createPptxBlob(
   return new Blob([content], { type: PPTX_MIME });
 }
 
-async function renderPagesToPng(
+export async function renderPagesToPng(
   pages: NonNullable<SlideModule['default']>,
   design: DesignSystem,
 ): Promise<string[]> {

@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FileCode2,
   FileText,
+  Film,
   ImagePlus,
   Loader2,
   LogIn,
@@ -68,6 +69,7 @@ import {
 } from '../lib/canva';
 import { exportSlideAsHtml } from '../lib/export-html';
 import { exportSlideAsPdf } from '../lib/export-pdf';
+import { exportSlideAsMp4 } from '../lib/export-mp4';
 import { exportSlideAsPptx } from '../lib/export-pptx';
 import type { SlideModule } from '../lib/sdk';
 import { loadSlide } from '../lib/slides';
@@ -496,6 +498,39 @@ export function Slide() {
                       <Presentation />
                       Export as PPTX
                     </DropdownMenuItem>
+                    {import.meta.env.DEV && (
+                      <DropdownMenuItem
+                        disabled={exporting}
+                        onSelect={async () => {
+                          if (!slide || exporting) return;
+                          setExporting(true);
+                          const id = toast.loading(
+                            'Rendering MP4… this can take a few minutes for long decks.',
+                          );
+                          try {
+                            await exportSlideAsMp4(slide, slideId, {
+                              fps: 30,
+                              fallbackDurationMs: 5000,
+                              onProgress: (phase, percent) => {
+                                toast.loading(`MP4: ${phase} (${Math.round(percent)}%)`, { id });
+                              },
+                            });
+                            toast.success('MP4 saved.', { id });
+                          } catch (err) {
+                            console.error('[open-slide] mp4 export failed', err);
+                            toast.error(
+                              err instanceof Error ? err.message : 'MP4 export failed',
+                              { id },
+                            );
+                          } finally {
+                            setExporting(false);
+                          }
+                        }}
+                      >
+                        <Film />
+                        Export as MP4
+                      </DropdownMenuItem>
+                    )}
                     {import.meta.env.DEV && (
                       <>
                         <DropdownMenuItem

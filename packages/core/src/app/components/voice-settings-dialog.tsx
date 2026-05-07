@@ -249,12 +249,12 @@ export function VoiceSettingsDialog({
             />
           </label>
 
-          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Voice
             <div className="flex gap-2">
               <Select
-                value={voiceId}
-                onValueChange={setVoiceId}
+                value={voices.some((v) => v.voiceId === voiceId) ? voiceId : ''}
+                onValueChange={(v) => setVoiceId(v)}
                 disabled={!providerConfigured || voicesLoading}
               >
                 <SelectTrigger className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]">
@@ -263,7 +263,7 @@ export function VoiceSettingsDialog({
                       voicesLoading
                         ? 'Loading voices…'
                         : providerConfigured
-                          ? 'Pick a voice'
+                          ? 'Pick from list'
                           : 'Configure API key first'
                     }
                   />
@@ -294,12 +294,28 @@ export function VoiceSettingsDialog({
                 )}
               </Button>
             </div>
+            <Input
+              value={voiceId}
+              onChange={(e) => setVoiceId(e.target.value)}
+              placeholder={
+                provider === 'elevenlabs'
+                  ? 'Voice ID (e.g. 21m00Tcm4TlvDq8ikWAM)'
+                  : provider === 'gemini'
+                    ? 'Voice name (e.g. Kore, Sulafat)'
+                    : 'Voice ID (e.g. Korean_AthleticGirl)'
+              }
+              className="border-2 border-foreground font-mono text-[12px] shadow-[3px_3px_0_var(--foreground)]"
+            />
+            <p className="text-[10px] font-medium leading-snug text-muted-foreground">
+              Pick from the list above OR paste any voice ID directly — works with shared voices,
+              community voices, or custom clones from another account.
+            </p>
             {voiceId && voices.find((v) => v.voiceId === voiceId)?.description && (
               <p className="text-[11px] font-medium text-muted-foreground">
                 {voices.find((v) => v.voiceId === voiceId)?.description}
               </p>
             )}
-          </label>
+          </div>
 
           {provider === 'elevenlabs' && providerConfigured && (
             <div className="flex items-center justify-between rounded-[2px] border-2 border-foreground bg-accent px-4 py-3 shadow-[3px_3px_0_var(--foreground)]">

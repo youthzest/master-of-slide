@@ -10,6 +10,7 @@ import { designPlugin } from './design-plugin.ts';
 import { filesPlugin } from './files-plugin.ts';
 import { locTagsPlugin } from './loc-tags-plugin.ts';
 import { loadUserConfig, type OpenSlideConfig, openSlidePlugin } from './open-slide-plugin.ts';
+import { mp4Plugin } from './mp4-plugin.ts';
 import { voicePlugin } from './voice-plugin.ts';
 
 function findPackageRoot(fromFile: string): string {
@@ -62,6 +63,7 @@ export async function createViteConfig(opts: CreateViteConfigOptions): Promise<I
       openSlidePlugin({ userCwd, config }),
       canvaPlugin({ env, userCwd }),
       voicePlugin({ env, userCwd }),
+      mp4Plugin(),
       designPlugin({ userCwd, slidesDir }),
       commentsPlugin({ userCwd, slidesDir }),
       filesPlugin({ userCwd, slidesDir }),
