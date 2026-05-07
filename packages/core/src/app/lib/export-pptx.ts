@@ -129,19 +129,44 @@ function materializeComputedStyles(root: HTMLElement): void {
   const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
   for (const el of elements) {
     const computed = getComputedStyle(el);
+    // Typography
     el.style.fontFamily = computed.fontFamily;
     el.style.fontSize = computed.fontSize;
     el.style.fontWeight = computed.fontWeight;
+    el.style.fontStyle = computed.fontStyle;
     el.style.lineHeight = computed.lineHeight;
     el.style.letterSpacing = computed.letterSpacing;
+    el.style.textAlign = computed.textAlign;
+    el.style.textDecoration = computed.textDecoration;
+    // Color
     el.style.color = computed.color;
     el.style.backgroundColor = computed.backgroundColor;
+    // Background images can use var() too. html-to-image will inline data
+    // URLs anyway, but resolving the computed value here defends against
+    // CSS-var-based gradients leaking through unresolved.
+    if (computed.backgroundImage && computed.backgroundImage !== 'none') {
+      el.style.backgroundImage = computed.backgroundImage;
+    }
+    // Borders
     el.style.borderTopColor = computed.borderTopColor;
     el.style.borderRightColor = computed.borderRightColor;
     el.style.borderBottomColor = computed.borderBottomColor;
     el.style.borderLeftColor = computed.borderLeftColor;
-    el.style.boxShadow = computed.boxShadow;
+    el.style.borderTopWidth = computed.borderTopWidth;
+    el.style.borderRightWidth = computed.borderRightWidth;
+    el.style.borderBottomWidth = computed.borderBottomWidth;
+    el.style.borderLeftWidth = computed.borderLeftWidth;
+    el.style.borderTopStyle = computed.borderTopStyle;
+    el.style.borderRightStyle = computed.borderRightStyle;
+    el.style.borderBottomStyle = computed.borderBottomStyle;
+    el.style.borderLeftStyle = computed.borderLeftStyle;
     el.style.borderRadius = computed.borderRadius;
+    // Effects
+    el.style.boxShadow = computed.boxShadow;
+    el.style.opacity = computed.opacity;
+    el.style.filter = computed.filter;
+    el.style.transform = computed.transform;
+    el.style.transformOrigin = computed.transformOrigin;
   }
 }
 
@@ -217,16 +242,39 @@ function isLoopingAnimation(animation: Animation): boolean {
 }
 
 async function waitForImages(root: HTMLElement): Promise<void> {
+  // <img> elements
   const imgs = Array.from(root.querySelectorAll('img'));
-  await Promise.all(
-    imgs.map((img) => {
-      if (img.complete) return Promise.resolve();
-      return new Promise<void>((resolve) => {
-        img.addEventListener('load', () => resolve(), { once: true });
-        img.addEventListener('error', () => resolve(), { once: true });
-      });
-    }),
+  const imgWaits = imgs.map((img) => {
+    if (img.complete) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      img.addEventListener('load', () => resolve(), { once: true });
+      img.addEventListener('error', () => resolve(), { once: true });
+    });
+  });
+
+  // CSS background-image URLs. html-to-image clones the computed style, but
+  // if the bitmap hasn't actually been fetched yet the rendered PNG can come
+  // back without that background. Force-fetch each unique URL so the browser
+  // cache is populated before toPng runs.
+  const bgUrls = new Set<string>();
+  for (const el of [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))]) {
+    const bg = getComputedStyle(el).backgroundImage;
+    if (!bg || bg === 'none') continue;
+    for (const m of bg.matchAll(/url\((['"]?)([^'")]+)\1\)/g)) {
+      bgUrls.add(m[2]);
+    }
+  }
+  const bgWaits = Array.from(bgUrls).map(
+    (src) =>
+      new Promise<void>((resolve) => {
+        const probe = new Image();
+        probe.onload = () => resolve();
+        probe.onerror = () => resolve();
+        probe.src = src;
+      }),
   );
+
+  await Promise.all([...imgWaits, ...bgWaits]);
 }
 
 function downloadBlob(blob: Blob, filename: string, type: string): void {
