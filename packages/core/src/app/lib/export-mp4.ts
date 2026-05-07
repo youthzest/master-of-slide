@@ -1,6 +1,12 @@
 import { getAllAudioForSlide } from '../components/audio-studio-dialog';
 import { defaultDesign } from './design';
 import { renderPagesToPng } from './export-pptx';
+import {
+  buildScriptEntries,
+  downloadBlob as downloadScriptBlob,
+  entriesToPlainText,
+  entriesToSrt,
+} from './export-script';
 import type { SlideModule } from './sdk';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -13,6 +19,8 @@ export type Mp4ExportOptions = {
   fps?: number;
   /** Used for slides that have no cached audio. Default 5000ms. */
   fallbackDurationMs?: number;
+  /** When true, also download a .srt subtitle file and a .txt script. */
+  includeScript?: boolean;
   onProgress?: (phase: 'rendering' | 'uploading' | 'encoding', percent: number) => void;
 };
 
@@ -23,6 +31,21 @@ export async function exportSlideAsMp4(
 ): Promise<void> {
   const blob = await createMp4Blob(slide, slideId, opts);
   downloadBlob(blob, `${slideId}.mp4`);
+
+  if (opts.includeScript ?? true) {
+    try {
+      const entries = await buildScriptEntries(slide, slideId, {
+        fallbackDurationMs: opts.fallbackDurationMs ?? 5000,
+      });
+      const srt = entriesToSrt(entries);
+      const txt = entriesToPlainText(entries, slide.meta?.title ?? slideId);
+      downloadScriptBlob(srt, `${slideId}.srt`);
+      downloadScriptBlob(txt, `${slideId}.script.txt`);
+    } catch (err) {
+      // Script generation is best-effort — never block the MP4 download.
+      console.warn('[open-slide] script export failed', err);
+    }
+  }
 }
 
 export async function createMp4Blob(

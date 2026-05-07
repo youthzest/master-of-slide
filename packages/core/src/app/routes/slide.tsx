@@ -71,6 +71,12 @@ import { exportSlideAsHtml } from '../lib/export-html';
 import { exportSlideAsPdf } from '../lib/export-pdf';
 import { exportSlideAsMp4 } from '../lib/export-mp4';
 import { exportSlideAsPptx } from '../lib/export-pptx';
+import {
+  buildScriptEntries,
+  downloadBlob as downloadScriptBlob,
+  entriesToPlainText,
+  entriesToSrt,
+} from '../lib/export-script';
 import type { SlideModule } from '../lib/sdk';
 import { loadSlide } from '../lib/slides';
 
@@ -528,7 +534,34 @@ export function Slide() {
                         }}
                       >
                         <Film />
-                        Export as MP4
+                        Export as MP4 + script (.srt + .txt)
+                      </DropdownMenuItem>
+                    )}
+                    {import.meta.env.DEV && (
+                      <DropdownMenuItem
+                        disabled={exporting || !slide}
+                        onSelect={async () => {
+                          if (!slide) return;
+                          try {
+                            const entries = await buildScriptEntries(slide, slideId, {
+                              fallbackDurationMs: 5000,
+                            });
+                            downloadScriptBlob(entriesToSrt(entries), `${slideId}.srt`);
+                            downloadScriptBlob(
+                              entriesToPlainText(entries, slide.meta?.title ?? slideId),
+                              `${slideId}.script.txt`,
+                            );
+                            toast.success('Script saved (.srt + .txt).');
+                          } catch (err) {
+                            console.error('[open-slide] script export failed', err);
+                            toast.error(
+                              err instanceof Error ? err.message : 'Script export failed',
+                            );
+                          }
+                        }}
+                      >
+                        <FileText />
+                        Download script only (.srt + .txt)
                       </DropdownMenuItem>
                     )}
                     {import.meta.env.DEV && (
