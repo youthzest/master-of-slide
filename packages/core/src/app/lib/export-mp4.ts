@@ -21,6 +21,13 @@ export type Mp4ExportOptions = {
   fallbackDurationMs?: number;
   /** When true, also download a .srt subtitle file and a .txt script. */
   includeScript?: boolean;
+  /**
+   * When generating the script, fall back to extracting visible text from
+   * each rendered page if the deck has no explicit narration/notes for it.
+   * Default true — without it, decks that haven't filled in the Audio
+   * Studio produce empty SRT/TXT files.
+   */
+  autoExtractScript?: boolean;
   onProgress?: (phase: 'rendering' | 'uploading' | 'encoding', percent: number) => void;
 };
 
@@ -34,8 +41,13 @@ export async function exportSlideAsMp4(
 
   if (opts.includeScript ?? true) {
     try {
+      // autoExtract makes the script useful even when the deck has no
+      // narration/notes fields filled in: empty rows fall back to the
+      // visible text of the rendered page (h1/h2/p/li), so YouTube and
+      // LMS uploads always get a meaningful subtitle/transcript.
       const entries = await buildScriptEntries(slide, slideId, {
         fallbackDurationMs: opts.fallbackDurationMs ?? 5000,
+        autoExtract: opts.autoExtractScript ?? true,
       });
       const srt = entriesToSrt(entries);
       const txt = entriesToPlainText(entries, slide.meta?.title ?? slideId);

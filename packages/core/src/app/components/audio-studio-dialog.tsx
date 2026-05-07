@@ -1,4 +1,4 @@
-import { Loader2, Mic2, Pause, Play, Sparkles, Trash2, Volume2 } from 'lucide-react';
+import { Loader2, Mic2, Pause, Play, Sparkles, Trash2, Volume2, Wand2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -191,6 +191,28 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
     [slide],
   );
 
+  const autoFillAllEmpty = useCallback(async () => {
+    if (!slide) return;
+    const empties = rows
+      .map((r, i) => (r.text.trim() ? -1 : i))
+      .filter((i) => i >= 0);
+    if (empties.length === 0) {
+      toast.message('Every slide already has narration text.');
+      return;
+    }
+    let filled = 0;
+    for (const i of empties) {
+      const r = await resolveNarrationWithExtraction(slide, i);
+      if (r.text.trim()) filled += 1;
+      setRows((prev) => {
+        const next = [...prev];
+        next[i] = { text: r.text, source: r.source };
+        return next;
+      });
+    }
+    toast.success(`Auto-filled ${filled} of ${empties.length} empty slide(s).`);
+  }, [slide, rows]);
+
   const synthesizeOne = async (i: number) => {
     const text = rows[i]?.text?.trim();
     if (!text) {
@@ -337,7 +359,10 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
           </label>
         </div>
 
-        <div className="flex items-center gap-2 border-t-2 border-foreground pt-3 text-[12px] font-bold">
+        <div className="flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-3 text-[12px] font-bold">
+          <Button size="sm" variant="outline" onClick={autoFillAllEmpty}>
+            <Wand2 className="size-3.5" /> Auto-fill empty
+          </Button>
           <Button
             size="sm"
             variant="default"

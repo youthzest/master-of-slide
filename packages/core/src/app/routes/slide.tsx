@@ -545,6 +545,7 @@ export function Slide() {
                           try {
                             const entries = await buildScriptEntries(slide, slideId, {
                               fallbackDurationMs: 5000,
+                              autoExtract: true,
                             });
                             downloadScriptBlob(entriesToSrt(entries), `${slideId}.srt`);
                             downloadScriptBlob(

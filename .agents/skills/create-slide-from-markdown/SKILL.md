@@ -128,7 +128,15 @@ For Obsidian notes, support common syntax:
    - `lang: 'ko'` should be present in `open-slide.config.ts` already; do not edit it from this skill.
    - font stack: `"Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif`.
    - use `wordBreak: 'keep-all'`, `overflowWrap: 'anywhere'`, and line-height >= 1.35 for body copy.
-9. Self-review with `slide-authoring`.
+9. **Always emit a top-level `narration` array** (one string per page,
+   index-aligned with `default`). The Audio Studio uses it as the default TTS
+   script and MP4 export bakes it into bundled `.srt` subtitles + `.txt`
+   transcript. Write each entry as natural spoken language — full sentences,
+   30–80 words, no bullet fragments, in the deck's primary language. Keep
+   the array length equal to the page count; use `undefined` only for slides
+   that intentionally play silent (rare). See `slide-authoring`'s "Narration"
+   section for the exact shape.
+10. Self-review with `slide-authoring`.
 
 ## AI-generated images
 

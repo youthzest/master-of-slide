@@ -38,6 +38,30 @@ export default [Cover, Body] satisfies Page[];
 - `meta.title` (optional) shows in the slide header. Default is the folder name.
 - The slide id is the kebab-case folder name. Pick something short and descriptive (`q2-roadmap`, `team-offsite-2026`).
 
+### Narration (for MP4 export and the Audio Studio)
+
+Every deck *should* also export a top-level `narration` array, one string per page, that reads naturally when spoken aloud. The Audio Studio uses it as the default script, and MP4 export bakes it into the bundled `.srt` subtitles + `.txt` script. Without it, MP4 export still works (it falls back to extracting visible page text), but the result is choppy.
+
+```tsx
+export const meta: SlideMeta = { title: 'My slide' };
+
+// Index-aligned with the page array below. Slot `undefined` (or just an
+// empty string) for slides that should auto-fall-back to visible text.
+export const narration: (string | undefined)[] = [
+  '안녕하세요. 첫 슬라이드의 내레이션입니다. 글이 아니라 입으로 말한다는 느낌으로 작성하세요.',
+  '두 번째 슬라이드. 보이는 텍스트와 다른 풀어쓴 설명이어도 좋습니다.',
+  // …one per page, length must equal the default array's length
+];
+
+export default [Cover, Body] satisfies Page[];
+```
+
+Notes on style:
+- Speak in full sentences. Avoid bullet fragments ("• ABC") since TTS reads them awkwardly.
+- Korean and English both work. Match the deck's primary language; mixed languages within one slide are fine.
+- ~30–80 words per slide is a comfortable narration length; longer scripts will lengthen the MP4 segment automatically.
+- Use `meta.notes?: (string | undefined)[]` for *speaker* notes (presenter view). The Audio Studio falls back to `notes[i]` if `narration[i]` is missing — useful when you want one source of truth for both.
+
 ## Canvas
 
 Every page renders into a fixed **1920 × 1080** canvas. The framework scales it; you design as if the viewport is literally 1920×1080.
