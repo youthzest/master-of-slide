@@ -73,6 +73,33 @@ pnpm dev:demo
 
 설치 후에는 Codex나 Claude Code를 다시 시작해야 새 스킬/명령이 보입니다.
 
+## 한 번에 업데이트 (`pnpm refresh`)
+
+이미 클론한 저장소를 최신 상태로 끌어올릴 때:
+
+```bash
+pnpm refresh
+```
+
+이 한 줄이 다음을 자동으로 처리합니다.
+
+1. `git pull --ff-only origin main`
+2. `pnpm install` (변경된 의존성)
+3. `pnpm --filter @open-slide/core build` (dev 서버가 새 plugin 코드를 픽업)
+4. `pnpm install:agents` (`/slide` 스킬 + `slide.md` 명령 재배포)
+5. macOS LaunchAgent `com.openslide.dev`가 떠 있으면 `launchctl kickstart`로 재시작
+
+스크립트 실체는 [`scripts/update.sh`](scripts/update.sh)이고 옵션이 있습니다.
+
+```bash
+./scripts/update.sh                 # 위와 동일
+./scripts/update.sh --branch dev    # main 대신 다른 브랜치
+./scripts/update.sh --no-restart    # 서버는 손대지 않음
+pnpm refresh:no-restart             # 같은 효과
+```
+
+LaunchAgent로 항상 띄워두는 방법은 [docs/launch-agent.md](docs/launch-agent.md)에서 — 등록만 한 번 해두면 그 뒤로 `pnpm refresh` 한 줄로 머신 재부팅 없이 최신 빌드가 반영됩니다.
+
 사용 예:
 
 ```text
