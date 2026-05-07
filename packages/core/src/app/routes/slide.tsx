@@ -10,6 +10,7 @@ import {
   LogIn,
   Pencil,
   Play,
+  Mic2,
   Presentation,
   Settings,
   Volume2,
@@ -52,6 +53,7 @@ import { useFolders } from '@/lib/folders';
 import { useWheelPageNavigation } from '@/lib/use-wheel-page-navigation';
 import { cn } from '@/lib/utils';
 import { ClickNavZones } from '../components/click-nav-zones';
+import { AudioStudioDialog } from '../components/audio-studio-dialog';
 import { PdfProgressToast } from '../components/pdf-progress-toast';
 import { VoiceSettingsDialog } from '../components/voice-settings-dialog';
 import { Player } from '../components/player';
@@ -85,6 +87,7 @@ export function Slide() {
   const [designOpen, setDesignOpen] = useState(false);
   const [canvaConfigOpen, setCanvaConfigOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  const [audioStudioOpen, setAudioStudioOpen] = useState(false);
   const { renameSlide } = useFolders();
   const {
     upload: uploadAsset,
@@ -563,13 +566,22 @@ export function Slide() {
                       </>
                     )}
                     {import.meta.env.DEV && (
-                      <DropdownMenuItem
-                        disabled={exporting}
-                        onSelect={() => setVoiceSettingsOpen(true)}
-                      >
-                        <Volume2 />
-                        Voice Settings
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem
+                          disabled={exporting || !slide}
+                          onSelect={() => setAudioStudioOpen(true)}
+                        >
+                          <Mic2 />
+                          Audio Studio
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={exporting}
+                          onSelect={() => setVoiceSettingsOpen(true)}
+                        >
+                          <Volume2 />
+                          Voice Settings
+                        </DropdownMenuItem>
+                      </>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -663,6 +675,12 @@ export function Slide() {
             }}
           />
           <VoiceSettingsDialog open={voiceSettingsOpen} onOpenChange={setVoiceSettingsOpen} />
+          <AudioStudioDialog
+            open={audioStudioOpen}
+            onOpenChange={setAudioStudioOpen}
+            slide={slide}
+            slideId={slideId}
+          />
           <LogoAssetDialog
             open={logoAssetOpen}
             slideId={slideId}
