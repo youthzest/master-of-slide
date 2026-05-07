@@ -167,20 +167,27 @@ export function InspectorPanel() {
       footer={<CommentsSection selected={pinSelected} onAdd={add} />}
     >
       {duplicateCount > 1 && (
-        <Section title="⚠️ Shared component">
-          <p className="text-[11px] leading-relaxed text-amber-900">
-            This element renders <strong>{duplicateCount} times</strong> across the deck (it lives
-            inside a reusable component). Editing text or styles here will sync to <strong>every</strong>{' '}
-            instance. To change just one slide, copy the component into that slide's JSX inline first.
-          </p>
+        <Section title="⚠️ Shared component — editing locked">
+          <div className="space-y-2 rounded-[2px] border-2 border-amber-600 bg-amber-100 p-3 text-[11px] leading-relaxed text-amber-900">
+            <p>
+              This element is rendered by a reusable component that appears in{' '}
+              <strong>{duplicateCount} places</strong> across the deck. Saving an edit here would
+              cascade to every instance — which used to silently rewrite "other text boxes" the user
+              never selected.
+            </p>
+            <p>
+              <strong>To edit just this one occurrence</strong>, copy the component's JSX inline
+              into the slide that needs the change, then re-open Inspector on the inlined copy.
+            </p>
+          </div>
         </Section>
       )}
 
-      {pinSnapshot.text !== null ? (
+      {pinSnapshot.text !== null && duplicateCount === 1 ? (
         <Section title="Content">
           <ContentField snapshot={pinSnapshot} apply={apply} />
         </Section>
-      ) : (
+      ) : pinSnapshot.text === null ? (
         <Section title="Content">
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             This element wraps child elements (e.g. nested <code>&lt;span&gt;</code>,{' '}
@@ -189,37 +196,41 @@ export function InspectorPanel() {
             it from there.
           </p>
         </Section>
+      ) : null}
+
+      {duplicateCount === 1 && (
+        <>
+          <Separator />
+
+          <Section title="Typography">
+            <FontSizeField snapshot={pinSnapshot} apply={apply} />
+            <FontWeightField snapshot={pinSnapshot} apply={apply} />
+            <StyleToggles snapshot={pinSnapshot} apply={apply} />
+            <LineHeightField snapshot={pinSnapshot} apply={apply} />
+            <LetterSpacingField snapshot={pinSnapshot} apply={apply} />
+            <TextAlignField snapshot={pinSnapshot} apply={apply} />
+          </Section>
+
+          <Separator />
+
+          <Section title="Color">
+            <ColorField
+              label="Text"
+              value={pinSnapshot.color}
+              onChange={(v) => apply([{ kind: 'set-style', key: 'color', value: v }])}
+              clearable={false}
+            />
+            <ColorField
+              label="Background"
+              value={pinSnapshot.backgroundColor ?? '#ffffff'}
+              dim={!pinSnapshot.backgroundColor}
+              onChange={(v) => apply([{ kind: 'set-style', key: 'backgroundColor', value: v }])}
+              onClear={() => apply([{ kind: 'set-style', key: 'backgroundColor', value: null }])}
+              clearable
+            />
+          </Section>
+        </>
       )}
-
-      <Separator />
-
-      <Section title="Typography">
-        <FontSizeField snapshot={pinSnapshot} apply={apply} />
-        <FontWeightField snapshot={pinSnapshot} apply={apply} />
-        <StyleToggles snapshot={pinSnapshot} apply={apply} />
-        <LineHeightField snapshot={pinSnapshot} apply={apply} />
-        <LetterSpacingField snapshot={pinSnapshot} apply={apply} />
-        <TextAlignField snapshot={pinSnapshot} apply={apply} />
-      </Section>
-
-      <Separator />
-
-      <Section title="Color">
-        <ColorField
-          label="Text"
-          value={pinSnapshot.color}
-          onChange={(v) => apply([{ kind: 'set-style', key: 'color', value: v }])}
-          clearable={false}
-        />
-        <ColorField
-          label="Background"
-          value={pinSnapshot.backgroundColor ?? '#ffffff'}
-          dim={!pinSnapshot.backgroundColor}
-          onChange={(v) => apply([{ kind: 'set-style', key: 'backgroundColor', value: v }])}
-          onClear={() => apply([{ kind: 'set-style', key: 'backgroundColor', value: null }])}
-          clearable
-        />
-      </Section>
 
       {pinSnapshot.imageSrc !== null && (
         <>

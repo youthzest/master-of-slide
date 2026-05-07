@@ -137,7 +137,7 @@ const Cover: Page = () => (
           lineHeight: 1.02,
         }}
       >
-        Stop prompting.
+        <span>Stop prompting.</span>
         <br />
         <span style={{ color: 'var(--osd-accent)' }}>Start specifying.</span>
       </h1>
@@ -2268,9 +2268,12 @@ const Closing: Page = () => (
           lineHeight: 1.05,
         }}
       >
-        코드가 아니라
+        <span>코드가 아니라</span>
         <br />
-        <span style={{ color: 'var(--osd-accent)' }}>명세</span>를 먼저.
+        <span>
+          <span style={{ color: 'var(--osd-accent)' }}>명세</span>
+          <span>를 먼저.</span>
+        </span>
       </h1>
       <p
         style={{

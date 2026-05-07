@@ -105,10 +105,19 @@ export function VoiceSettingsDialog({
       .then((vs) => {
         if (cancelled) return;
         setVoices(vs);
-        // Pre-select stored default if it exists in the returned list
-        const stored = config.defaultVoiceIds[provider];
-        if (stored && vs.some((v) => v.voiceId === stored)) setVoiceId(stored);
-        else if (vs.length > 0) setVoiceId(vs[0].voiceId);
+        // Don't clobber a user-entered custom voice ID. Only seed when the
+        // current state is empty or matches a stored/list value already.
+        setVoiceId((current) => {
+          const stored = config.defaultVoiceIds[provider];
+          if (current && !vs.some((v) => v.voiceId === current)) {
+            // User typed a custom ID (e.g. a shared/cloned voice not in
+            // their account list) — keep it.
+            return current;
+          }
+          if (stored) return stored;
+          if (vs.length > 0) return vs[0].voiceId;
+          return current;
+        });
       })
       .catch((err) => {
         if (!cancelled) toast.error(err instanceof Error ? err.message : 'Voice list failed');
