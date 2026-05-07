@@ -139,13 +139,209 @@ const elevenlabsProvider: VoiceProvider = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Provider registry — extend by adding Gemini/mmx entries here.
+// Gemini TTS provider — Google AI Studio
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GEMINI_MODEL = 'gemini-2.5-flash-preview-tts';
+const GEMINI_PCM_SAMPLE_RATE = 24000;
+
+// Curated list of Gemini 2.5 prebuilt voices with personality hints.
+// Gemini does not expose a list endpoint, so this stays in code.
+const GEMINI_VOICES: Voice[] = [
+  { voiceId: 'Zephyr', name: 'Zephyr', description: 'Bright', category: 'preset' },
+  { voiceId: 'Puck', name: 'Puck', description: 'Upbeat', category: 'preset' },
+  { voiceId: 'Charon', name: 'Charon', description: 'Informative', category: 'preset' },
+  { voiceId: 'Kore', name: 'Kore', description: 'Firm', category: 'preset' },
+  { voiceId: 'Fenrir', name: 'Fenrir', description: 'Excitable', category: 'preset' },
+  { voiceId: 'Leda', name: 'Leda', description: 'Youthful', category: 'preset' },
+  { voiceId: 'Orus', name: 'Orus', description: 'Firm', category: 'preset' },
+  { voiceId: 'Aoede', name: 'Aoede', description: 'Breezy', category: 'preset' },
+  { voiceId: 'Callirrhoe', name: 'Callirrhoe', description: 'Easy-going', category: 'preset' },
+  { voiceId: 'Autonoe', name: 'Autonoe', description: 'Bright', category: 'preset' },
+  { voiceId: 'Enceladus', name: 'Enceladus', description: 'Breathy', category: 'preset' },
+  { voiceId: 'Iapetus', name: 'Iapetus', description: 'Clear', category: 'preset' },
+  { voiceId: 'Umbriel', name: 'Umbriel', description: 'Easy-going', category: 'preset' },
+  { voiceId: 'Algieba', name: 'Algieba', description: 'Smooth', category: 'preset' },
+  { voiceId: 'Despina', name: 'Despina', description: 'Smooth', category: 'preset' },
+  { voiceId: 'Erinome', name: 'Erinome', description: 'Clear', category: 'preset' },
+  { voiceId: 'Algenib', name: 'Algenib', description: 'Gravelly', category: 'preset' },
+  { voiceId: 'Rasalgethi', name: 'Rasalgethi', description: 'Informative', category: 'preset' },
+  { voiceId: 'Laomedeia', name: 'Laomedeia', description: 'Upbeat', category: 'preset' },
+  { voiceId: 'Achernar', name: 'Achernar', description: 'Soft', category: 'preset' },
+  { voiceId: 'Alnilam', name: 'Alnilam', description: 'Firm', category: 'preset' },
+  { voiceId: 'Schedar', name: 'Schedar', description: 'Even', category: 'preset' },
+  { voiceId: 'Gacrux', name: 'Gacrux', description: 'Mature', category: 'preset' },
+  { voiceId: 'Pulcherrima', name: 'Pulcherrima', description: 'Forward', category: 'preset' },
+  { voiceId: 'Achird', name: 'Achird', description: 'Friendly', category: 'preset' },
+  { voiceId: 'Zubenelgenubi', name: 'Zubenelgenubi', description: 'Casual', category: 'preset' },
+  { voiceId: 'Vindemiatrix', name: 'Vindemiatrix', description: 'Gentle', category: 'preset' },
+  { voiceId: 'Sadachbia', name: 'Sadachbia', description: 'Lively', category: 'preset' },
+  { voiceId: 'Sadaltager', name: 'Sadaltager', description: 'Knowledgeable', category: 'preset' },
+  { voiceId: 'Sulafat', name: 'Sulafat', description: 'Warm', category: 'preset' },
+];
+
+const geminiProvider: VoiceProvider = {
+  id: 'gemini',
+  envKey: 'GEMINI_API_KEY',
+  isConfigured(env) {
+    return Boolean(env.GEMINI_API_KEY);
+  },
+  async listVoices() {
+    return GEMINI_VOICES;
+  },
+  async synthesize(env, text, voiceId) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'x-goog-api-key': requireKey(env, 'GEMINI_API_KEY'),
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text }] }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: voiceId },
+              },
+            },
+          },
+          model: GEMINI_MODEL,
+        }),
+      },
+    );
+    if (!res.ok) {
+      throw new Error(`Gemini synthesize failed (${res.status}): ${await res.text()}`);
+    }
+    const data = (await res.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ inlineData?: { data?: string } }> };
+      }>;
+    };
+    const base64 = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64) {
+      throw new Error('Gemini returned no audio data.');
+    }
+    const pcm = Buffer.from(base64, 'base64');
+    const wav = pcmToWav(pcm, GEMINI_PCM_SAMPLE_RATE, 1, 16);
+    return { audio: wav, contentType: 'audio/wav' };
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MiniMax (mmx) T2A v2 provider
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MINIMAX_HOST = 'https://api.minimax.io';
+const MINIMAX_DEFAULT_MODEL = 'speech-2.8-hd';
+
+const minimaxProvider: VoiceProvider = {
+  id: 'mmx',
+  envKey: 'MINIMAX_API_KEY',
+  isConfigured(env) {
+    return Boolean(env.MINIMAX_API_KEY ?? env.MMX_API_KEY);
+  },
+  async listVoices(env) {
+    const key = requireKey(env, 'MINIMAX_API_KEY', 'MMX_API_KEY');
+    const res = await fetch(`${MINIMAX_HOST}/v1/get_voice`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${key}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ voice_type: 'all' }),
+    });
+    if (!res.ok) {
+      throw new Error(`MiniMax listVoices failed (${res.status}): ${await res.text()}`);
+    }
+    const data = (await res.json()) as {
+      system_voice?: Array<{
+        voice_id: string;
+        voice_name?: string;
+        description?: string[] | string;
+      }>;
+      voice_cloning?: Array<{
+        voice_id: string;
+        voice_name?: string;
+        description?: string[] | string;
+      }>;
+    };
+    const voices: Voice[] = [];
+    for (const v of data.voice_cloning ?? []) {
+      voices.push({
+        voiceId: v.voice_id,
+        name: v.voice_name ?? v.voice_id,
+        description: Array.isArray(v.description) ? v.description.join(' ') : v.description,
+        category: 'cloned',
+      });
+    }
+    for (const v of data.system_voice ?? []) {
+      voices.push({
+        voiceId: v.voice_id,
+        name: v.voice_name ?? v.voice_id,
+        description: Array.isArray(v.description) ? v.description.join(' ') : v.description,
+        category: 'preset',
+        labels: extractMinimaxLabels(v.voice_id),
+      });
+    }
+    // Sort: Korean first, then English, then everything else; cloned voices stay on top
+    return voices.sort(minimaxVoiceCompare);
+  },
+  async synthesize(env, text, voiceId, opts = {}) {
+    const key = requireKey(env, 'MINIMAX_API_KEY', 'MMX_API_KEY');
+    const format = opts.format ?? 'mp3';
+    const res = await fetch(`${MINIMAX_HOST}/v1/t2a_v2`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${key}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: opts.modelId ?? MINIMAX_DEFAULT_MODEL,
+        text,
+        stream: false,
+        voice_setting: { voice_id: voiceId, speed: 1, vol: 1, pitch: 0 },
+        audio_setting: {
+          sample_rate: 32000,
+          bitrate: 128000,
+          format,
+          channel: 1,
+        },
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`MiniMax synthesize failed (${res.status}): ${await res.text()}`);
+    }
+    const data = (await res.json()) as {
+      data?: { audio?: string };
+      base_resp?: { status_code?: number; status_msg?: string };
+    };
+    if (data.base_resp && data.base_resp.status_code !== 0) {
+      throw new Error(
+        `MiniMax error: ${data.base_resp.status_msg ?? 'unknown'} (code ${data.base_resp.status_code})`,
+      );
+    }
+    const hex = data.data?.audio;
+    if (!hex) {
+      throw new Error('MiniMax returned no audio data.');
+    }
+    return {
+      audio: Buffer.from(hex, 'hex'),
+      contentType: format === 'mp3' ? 'audio/mpeg' : format === 'wav' ? 'audio/wav' : 'audio/aac',
+    };
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Provider registry — order here drives the default-fallback order in status.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PROVIDERS: Record<ProviderId, VoiceProvider | undefined> = {
   elevenlabs: elevenlabsProvider,
-  gemini: undefined, // Phase 2
-  mmx: undefined, // Phase 2
+  gemini: geminiProvider,
+  mmx: minimaxProvider,
 };
 
 const ENV_KEYS: Record<string, string | undefined> = {
@@ -317,12 +513,64 @@ function requireProvider(id: ProviderId): VoiceProvider {
   return p;
 }
 
-function requireKey(env: NodeJS.ProcessEnv, name: string): string {
-  const value = env[name];
-  if (!value) {
-    throw new Error(`${name} is not configured. Add it via the Voice Settings panel.`);
+function requireKey(env: NodeJS.ProcessEnv, ...names: string[]): string {
+  for (const name of names) {
+    const value = env[name];
+    if (value) return value;
   }
-  return value;
+  throw new Error(
+    `${names.join(' or ')} is not configured. Add it via the Voice Settings panel.`,
+  );
+}
+
+// PCM → WAV header wrap. Gemini returns raw 16-bit signed PCM; browsers can't
+// play that without a RIFF/WAV container.
+function pcmToWav(pcm: Buffer, sampleRate: number, channels: number, bitsPerSample: number): Buffer {
+  const byteRate = (sampleRate * channels * bitsPerSample) / 8;
+  const blockAlign = (channels * bitsPerSample) / 8;
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16); // PCM fmt chunk size
+  header.writeUInt16LE(1, 20); // PCM format
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]);
+}
+
+// Pull a few hint labels out of MiniMax voice IDs like "Korean_AthleticGirl"
+// so the UI can show language/persona without scraping descriptions.
+function extractMinimaxLabels(voiceId: string): Record<string, string> {
+  const m = voiceId.match(/^([A-Za-z]+)_(.+)$/);
+  if (!m) return {};
+  const [, lang, persona] = m;
+  return {
+    language: lang.toLowerCase(),
+    persona: persona.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase(),
+  };
+}
+
+const MINIMAX_LANG_ORDER: Record<string, number> = {
+  korean: 0,
+  english: 1,
+  japanese: 2,
+  chinese: 3,
+};
+
+function minimaxVoiceCompare(a: Voice, b: Voice): number {
+  if (a.category === 'cloned' && b.category !== 'cloned') return -1;
+  if (b.category === 'cloned' && a.category !== 'cloned') return 1;
+  const la = MINIMAX_LANG_ORDER[a.labels?.language ?? ''] ?? 99;
+  const lb = MINIMAX_LANG_ORDER[b.labels?.language ?? ''] ?? 99;
+  if (la !== lb) return la - lb;
+  return a.name.localeCompare(b.name);
 }
 
 function pickString(value: unknown): string | undefined {

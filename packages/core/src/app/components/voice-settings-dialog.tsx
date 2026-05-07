@@ -40,7 +40,7 @@ const PROVIDER_LABELS: Record<VoiceProviderId, string> = {
 const PROVIDER_DOCS: Record<VoiceProviderId, string> = {
   elevenlabs: 'https://elevenlabs.io/app/settings/api-keys',
   gemini: 'https://aistudio.google.com/app/apikey',
-  mmx: 'https://www.minimax.io/platform/document/SpeechSynthesis',
+  mmx: 'https://platform.minimax.io/user-center/basic-information/interface-key',
 };
 
 const SAMPLE_TEXT_KO = '안녕하세요. 이 목소리로 슬라이드 내레이션을 들어볼 수 있습니다.';
@@ -205,10 +205,10 @@ export function VoiceSettingsDialog({
               <SelectContent>
                 <SelectItem value="elevenlabs">ElevenLabs (cloning + presets)</SelectItem>
                 <SelectItem value="gemini" disabled={!status?.providers.gemini.available}>
-                  Gemini TTS {status?.providers.gemini.available ? '' : '(coming soon)'}
+                  Gemini TTS (30 prebuilt voices)
                 </SelectItem>
                 <SelectItem value="mmx" disabled={!status?.providers.mmx.available}>
-                  MiniMax {status?.providers.mmx.available ? '' : '(coming soon)'}
+                  MiniMax (Korean + multilingual)
                 </SelectItem>
               </SelectContent>
             </Select>
