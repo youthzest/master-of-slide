@@ -87,7 +87,13 @@ async function renderPagesToPng(
       host.style.width = `${CANVAS_WIDTH}px`;
       host.style.height = `${CANVAS_HEIGHT}px`;
       host.style.background = design.palette.bg;
-      Object.assign(host.style, designToCssVars(design));
+      // CSS custom properties must be set via setProperty(); bracket-style
+      // assignment through Object.assign silently fails in some engines and
+      // leaves var(--osd-*) references unresolved during PNG capture, which
+      // produced the "black text on dark bg" bug in PPTX/Canva export.
+      for (const [key, value] of Object.entries(designToCssVars(design))) {
+        host.style.setProperty(key, value);
+      }
       container.appendChild(host);
 
       const root = createRoot(host);
