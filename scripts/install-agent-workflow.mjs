@@ -54,6 +54,8 @@ console.log('- ~/.claude/commands/slide.md');
 console.log('');
 console.log('Bundled themes (9 total) ship inside the slide skill:');
 console.log('- themes/{editorial-noir,paper-press,neon-terminal}.md');
-console.log('- theme-references/{neo-brutalism,research-brief,vercel-minimal,raycast-dark-product,photo-editorial-tech}.md');
+console.log(
+  '- theme-references/{neo-brutalism,research-brief,vercel-minimal,raycast-dark-product,photo-editorial-tech}.md',
+);
 console.log('');
 console.log('Restart Codex or Claude Code before using the new workflow.');

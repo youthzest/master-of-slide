@@ -161,7 +161,7 @@ async function main() {
   lines.push('');
   lines.push(dim(rule));
   lines.push(
-    `  ${yellow('💡')} ${bold('Master Of Slide')} is ${bold(`${behind} commit${behind === 1 ? '' : 's'} behind`)} ${cyan(`origin/${branch}`)}.`
+    `  ${yellow('💡')} ${bold('Master Of Slide')} is ${bold(`${behind} commit${behind === 1 ? '' : 's'} behind`)} ${cyan(`origin/${branch}`)}.`,
   );
   lines.push(`     Run  ${bold(cyan('pnpm refresh'))}  to pull and rebuild.`);
   if (preview) {
@@ -171,7 +171,7 @@ async function main() {
       preview
         .split('\n')
         .map((line) => `   ${line}`)
-        .join('\n')
+        .join('\n'),
     );
   }
   if (aheadNote) {
