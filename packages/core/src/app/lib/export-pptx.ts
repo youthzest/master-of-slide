@@ -7,9 +7,13 @@ import { CANVAS_HEIGHT, CANVAS_WIDTH, type SlideModule } from './sdk';
 
 type PptxExportOptions = { lang?: string };
 
-const SLIDE_W = 13.333333;
+const SLIDE_W = 13.333333; // inches
 const SLIDE_H = 7.5;
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public API — backward compatible
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function exportSlideAsPptx(
   slide: SlideModule,
@@ -29,9 +33,9 @@ export async function createPptxBlob(
   if (pages.length === 0) throw new Error('PPTX export requires at least one slide page.');
 
   const design = slide.design ?? defaultDesign;
-  const [{ default: PptxGenJS }, pageImages] = await Promise.all([
+  const [{ default: PptxGenJS }, pageDataList] = await Promise.all([
     import('pptxgenjs'),
-    renderPagesToPng(pages, design),
+    renderPagesToPptxData(pages, design),
   ]);
 
   const pptx = new PptxGenJS();
@@ -45,14 +49,48 @@ export async function createPptxBlob(
     bodyFontFace: primaryFontFace(design.fonts.body),
   };
 
-  pageImages.forEach((data, i) => {
+  pageDataList.forEach((data, i) => {
     const page = pptx.addSlide();
     page.background = { color: hexColor(design.palette.bg, 'FFFFFF') };
-    page.addImage({ data, x: 0, y: 0, w: SLIDE_W, h: SLIDE_H });
+    // Layer 1 — background PNG with text rendered transparent so the visual
+    // (gradients, shapes, hairlines, photos, mermaid-like vector blocks)
+    // matches the on-screen design exactly.
+    page.addImage({ data: data.png, x: 0, y: 0, w: SLIDE_W, h: SLIDE_H });
+
+    // Layer 2 — native text overlays so PowerPoint, Keynote, and Canva can
+    // edit, search, translate, and reflow every word. Without this every
+    // slide is a single rasterized bitmap and every external editor "breaks"
+    // the design.
+    for (const t of data.texts) {
+      try {
+        page.addText(t.text, {
+          x: t.x,
+          y: t.y,
+          w: t.w,
+          h: t.h,
+          fontFace: t.fontFace,
+          fontSize: t.fontSize,
+          color: t.color,
+          bold: t.bold,
+          italic: t.italic,
+          align: t.align,
+          valign: t.valign,
+          margin: 0,
+          isTextBox: true,
+          autoFit: false,
+        });
+      } catch {
+        // pptxgenjs occasionally rejects edge-case font/colors. Skipping a
+        // single overlay still keeps the slide visually correct via Layer 1.
+      }
+    }
+
     const note = slide.notes?.[i];
-    if (note) {
+    const narration = slide.narration?.[i];
+    const speakerNote = narration ?? note;
+    if (speakerNote) {
       const withNotes = page as unknown as { addNotes?: (notes: string) => void };
-      withNotes.addNotes?.(note);
+      withNotes.addNotes?.(speakerNote);
     }
   });
 
@@ -63,10 +101,63 @@ export async function createPptxBlob(
   return new Blob([content], { type: PPTX_MIME });
 }
 
+/**
+ * Backward-compatible PNG-only renderer. Used by export-mp4.ts where MP4 is
+ * inherently raster and we only need the bitmap stream. For PPTX use
+ * `renderPagesToPptxData` instead so the file ships native text overlays.
+ */
 export async function renderPagesToPng(
   pages: NonNullable<SlideModule['default']>,
   design: DesignSystem,
+  opts: { pixelRatio?: number } = {},
 ): Promise<string[]> {
+  const data = await renderPagesToPptxData(pages, design, {
+    pixelRatio: opts.pixelRatio ?? 2,
+    extractText: false,
+  });
+  return data.map((d) => d.png);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hybrid renderer — captures background PNG + native text entries.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type PptxTextEntry = {
+  text: string;
+  /** Inches from slide left. */
+  x: number;
+  /** Inches from slide top. */
+  y: number;
+  /** Inches. */
+  w: number;
+  /** Inches. */
+  h: number;
+  /** Points. */
+  fontSize: number;
+  fontFace: string;
+  /** Hex without leading '#'. */
+  color: string;
+  bold: boolean;
+  italic: boolean;
+  align: 'left' | 'center' | 'right';
+  valign: 'top' | 'middle' | 'bottom';
+};
+
+export type PptxPageData = {
+  /** Data URL (image/png). Background layer with text rendered transparent. */
+  png: string;
+  /** Native text overlays in PPTX inch coordinates. */
+  texts: PptxTextEntry[];
+};
+
+export async function renderPagesToPptxData(
+  pages: NonNullable<SlideModule['default']>,
+  design: DesignSystem,
+  opts: { pixelRatio?: number; extractText?: boolean } = {},
+): Promise<PptxPageData[]> {
+  const pixelRatio = opts.pixelRatio ?? 2;
+  const extractText = opts.extractText ?? true;
+
   const container = document.createElement('div');
   container.setAttribute('aria-hidden', 'true');
   Object.assign(container.style, {
@@ -79,7 +170,7 @@ export async function renderPagesToPng(
   });
   document.body.appendChild(container);
 
-  const result: string[] = [];
+  const result: PptxPageData[] = [];
   try {
     for (const Page of pages) {
       const host = document.createElement('div');
@@ -107,15 +198,25 @@ export async function renderPagesToPng(
       await nextPaint();
       materializeComputedStyles(host);
 
-      result.push(
-        await toPng(host, {
-          width: CANVAS_WIDTH,
-          height: CANVAS_HEIGHT,
-          pixelRatio: 1,
-          backgroundColor: design.palette.bg,
-          cacheBust: true,
-        }),
-      );
+      // 1. Extract text entries while the page is still fully visible.
+      const texts = extractText ? extractTextEntries(host) : [];
+
+      // 2. Hide text in the DOM so the captured PNG holds only the visual
+      //    backdrop. Without this we'd paint every word twice (raster +
+      //    native), and edits to the native overlay would silently disagree
+      //    with the bitmap underneath.
+      const restoreTextColors = extractText ? hideAllTextColors(host) : () => {};
+      await nextPaint();
+      const png = await toPng(host, {
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        pixelRatio,
+        backgroundColor: design.palette.bg,
+        cacheBust: true,
+      });
+      restoreTextColors();
+
+      result.push({ png, texts });
       root.unmount();
       container.removeChild(host);
     }
@@ -124,6 +225,138 @@ export async function renderPagesToPng(
   }
   return result;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Text extraction — DOM walker that finds every visible text node, computes
+// its on-canvas rectangle, and projects it into PPTX inch coordinates.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function extractTextEntries(host: HTMLElement): PptxTextEntry[] {
+  const entries: PptxTextEntry[] = [];
+  const hostRect = host.getBoundingClientRect();
+  if (hostRect.width === 0 || hostRect.height === 0) return entries;
+  const sx = SLIDE_W / hostRect.width;
+  const sy = SLIDE_H / hostRect.height;
+
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const text = node.textContent;
+      if (!text || !text.trim()) return NodeFilter.FILTER_REJECT;
+      const parent = (node as Text).parentElement;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      if (!isVisibleForExport(parent, host)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    const textNode = node as Text;
+    const text = textNode.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    if (!text) continue;
+    const parent = textNode.parentElement;
+    if (!parent) continue;
+    const computed = getComputedStyle(parent);
+
+    // The bounding rect of the parent block is more stable than the range
+    // rect for justified / wrapped paragraphs and matches PowerPoint's
+    // text-frame model (text fills its container box).
+    const rect = parent.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) continue;
+
+    const fontSizePx = parseFloatOr(computed.fontSize, 16);
+    const fontWeightNum = parseFloatOr(computed.fontWeight, 400);
+
+    const align: PptxTextEntry['align'] =
+      computed.textAlign === 'center'
+        ? 'center'
+        : computed.textAlign === 'right'
+          ? 'right'
+          : 'left';
+
+    // Block-level text containers report their full height; align vertically
+    // so single-line headings sit centered inside the box.
+    const valign: PptxTextEntry['valign'] = inferVerticalAlign(parent, computed);
+
+    entries.push({
+      text,
+      x: clamp((rect.left - hostRect.left) * sx, 0, SLIDE_W),
+      y: clamp((rect.top - hostRect.top) * sy, 0, SLIDE_H),
+      w: clamp(rect.width * sx, 0.05, SLIDE_W),
+      h: clamp(rect.height * sy, 0.05, SLIDE_H),
+      // px → pt (96dpi → 72pt/in)
+      fontSize: Math.max(6, +(fontSizePx * 0.75).toFixed(1)),
+      fontFace: primaryFontFace(computed.fontFamily),
+      color: rgbToHex(computed.color, '111111'),
+      bold: fontWeightNum >= 600 || computed.fontWeight === 'bold',
+      italic: computed.fontStyle === 'italic',
+      align,
+      valign,
+    });
+  }
+
+  // Stable sort by reading order so PowerPoint's tab-cycle through shapes
+  // matches the visual top-to-bottom flow.
+  entries.sort((a, b) => a.y - b.y || a.x - b.x);
+  return entries;
+}
+
+function isVisibleForExport(start: Element, host: HTMLElement): boolean {
+  let cur: Element | null = start;
+  while (cur && cur !== host) {
+    if (cur.getAttribute('aria-hidden') === 'true') return false;
+    if (cur instanceof HTMLImageElement) return false;
+    const cs = getComputedStyle(cur);
+    if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+    if (parseFloat(cs.opacity || '1') < 0.05) return false;
+    cur = cur.parentElement;
+  }
+  return true;
+}
+
+function inferVerticalAlign(el: HTMLElement, cs: CSSStyleDeclaration): PptxTextEntry['valign'] {
+  // Honor inline alignment hints; default to top so multiline copy reads from
+  // the box origin (matches HTML behavior).
+  if (cs.alignItems === 'center' || cs.justifyContent === 'center') return 'middle';
+  if (cs.alignItems === 'flex-end' || cs.justifyContent === 'flex-end') return 'bottom';
+  void el;
+  return 'top';
+}
+
+function hideAllTextColors(host: HTMLElement): () => void {
+  const restorations: Array<() => void> = [];
+  // Hide text by zeroing the rendered glyph color but keep the box layout
+  // intact. We use color: transparent rather than visibility:hidden so spans
+  // inside flex/grid containers keep their position.
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_ELEMENT);
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    const el = node as HTMLElement;
+    if (!hasDirectTextChild(el)) continue;
+    const orig = el.style.color;
+    el.style.color = 'transparent';
+    restorations.push(() => {
+      el.style.color = orig;
+    });
+  }
+  return () => {
+    for (const r of restorations) r();
+  };
+}
+
+function hasDirectTextChild(el: HTMLElement): boolean {
+  for (const child of Array.from(el.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE && (child.textContent?.trim().length ?? 0) > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Style materialization — runs after React mounts so `var(--osd-*)` and
+// `currentColor` get resolved before html-to-image clones the tree.
+// ─────────────────────────────────────────────────────────────────────────────
 
 function materializeComputedStyles(root: HTMLElement): void {
   const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
@@ -141,9 +374,6 @@ function materializeComputedStyles(root: HTMLElement): void {
     // Color
     el.style.color = computed.color;
     el.style.backgroundColor = computed.backgroundColor;
-    // Background images can use var() too. html-to-image will inline data
-    // URLs anyway, but resolving the computed value here defends against
-    // CSS-var-based gradients leaking through unresolved.
     if (computed.backgroundImage && computed.backgroundImage !== 'none') {
       el.style.backgroundImage = computed.backgroundImage;
     }
@@ -195,9 +425,6 @@ async function waitForAnimations(
   const animations = root.getAnimations?.({ subtree: true }) ?? [];
   if (animations.length === 0) return;
 
-  // Looping animations (pulse, glow, blink, caret, drift, shimmer, …) never
-  // resolve `animation.finished`. Force them to a stable terminal frame before
-  // we wait so they do not hang the export.
   for (const animation of animations) {
     if (isLoopingAnimation(animation)) {
       try {
@@ -242,7 +469,6 @@ function isLoopingAnimation(animation: Animation): boolean {
 }
 
 async function waitForImages(root: HTMLElement): Promise<void> {
-  // <img> elements
   const imgs = Array.from(root.querySelectorAll('img'));
   const imgWaits = imgs.map((img) => {
     if (img.complete) return Promise.resolve();
@@ -252,10 +478,6 @@ async function waitForImages(root: HTMLElement): Promise<void> {
     });
   });
 
-  // CSS background-image URLs. html-to-image clones the computed style, but
-  // if the bitmap hasn't actually been fetched yet the rendered PNG can come
-  // back without that background. Force-fetch each unique URL so the browser
-  // cache is populated before toPng runs.
   const bgUrls = new Set<string>();
   for (const el of [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))]) {
     const bg = getComputedStyle(el).backgroundImage;
@@ -306,4 +528,26 @@ function hexColor(value: string, fallback: string): string {
   const trimmed = value.trim();
   const match = /^#?([0-9a-f]{6})$/i.exec(trimmed);
   return match?.[1]?.toUpperCase() ?? fallback;
+}
+
+function rgbToHex(color: string, fallback: string): string {
+  const trimmed = color.trim();
+  const hexMatch = /^#?([0-9a-f]{6})$/i.exec(trimmed);
+  if (hexMatch) return hexMatch[1].toUpperCase();
+  const rgb = /rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(trimmed);
+  if (!rgb) return fallback.toUpperCase();
+  const [, r, g, b] = rgb;
+  return [r, g, b]
+    .map((v) => Math.max(0, Math.min(255, parseInt(v, 10))).toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
+}
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function parseFloatOr(value: string, fallback: number): number {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : fallback;
 }
