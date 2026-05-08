@@ -99,7 +99,34 @@ export function mp4Plugin(): Plugin {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pipeline
+//
+// Each slide becomes a segment whose VIDEO and AUDIO durations are forced to
+// the same frame-aligned length. Three failure modes the previous version
+// hit, all fixed here:
+//
+//   1. `-shortest` truncated audio mid-AAC-frame (1024 samples ≈ 23 ms each),
+//      so the segment's audio ended ~10–50 ms shorter than its video. Across
+//      14 slides this accumulated to ~2 s of drift between the streams.
+//      Fix: probe the audio with ffprobe, round its duration UP to the
+//      nearest video frame, and force BOTH streams to that exact duration
+//      using `-t` for video and `apad,atrim` for audio.
+//
+//   2. The audio sample rate / channel layout was whatever the input was
+//      (TTS sources commonly emit 22050 Hz mono). Different inputs concat'd
+//      with `-c copy` cause clicks at every segment boundary.
+//      Fix: every segment is encoded with `-ar 48000 -ac 2` so the stream
+//      params are bit-identical across segments.
+//
+//   3. The final concat used the demuxer with `-c copy`, which only stitches
+//      packets and does NOT realign timestamps, so any per-segment skew
+//      shows up as audio dropouts and lip-sync drift in the player.
+//      Fix: assemble all segments with the `concat` FILTER and re-encode
+//      once at the end. Slower, but produces a gapless A/V-locked stream.
 // ─────────────────────────────────────────────────────────────────────────────
+
+const AUDIO_SAMPLE_RATE = 48000;
+const AUDIO_CHANNELS = 2;
+const AUDIO_BITRATE = '192k';
 
 async function renderSegments(
   slides: SlideInput[],
@@ -107,6 +134,8 @@ async function renderSegments(
   opts: { fps: number; width: number; height: number },
 ): Promise<string[]> {
   const out: string[] = [];
+  const frameDurSec = 1 / opts.fps;
+
   for (let i = 0; i < slides.length; i++) {
     const s = slides[i];
     const id = String(i + 1).padStart(4, '0');
@@ -114,68 +143,86 @@ async function renderSegments(
     await writeFile(imagePath, Buffer.from(s.image, 'base64'));
 
     const segmentPath = path.join(workdir, `segment-${id}.mp4`);
+    const vfScale =
+      `scale=${opts.width}:${opts.height}:force_original_aspect_ratio=decrease,` +
+      `pad=${opts.width}:${opts.height}:(ow-iw)/2:(oh-ih)/2:black,setsar=1`;
 
     if (s.audio) {
       const ext = pickAudioExt(s.audioMime ?? 'audio/mpeg');
       const audioPath = path.join(workdir, `audio-${id}.${ext}`);
       await writeFile(audioPath, Buffer.from(s.audio, 'base64'));
+
+      // Probe the source audio so we know exactly how long the segment must
+      // be. Round UP to the next whole video frame so the still-image loop
+      // ends on a frame boundary; this prevents the `-shortest` style
+      // mid-frame truncation that caused the choppy-audio regression.
+      const audioDur = await probeAudioDuration(audioPath);
+      const durationSec = Math.max(
+        frameDurSec,
+        Math.ceil((audioDur + 0.05) / frameDurSec) * frameDurSec,
+      );
+      const durationStr = durationSec.toFixed(3);
+
       await runFfmpeg([
         '-y',
-        '-loop',
-        '1',
-        '-i',
-        imagePath,
-        '-i',
-        audioPath,
-        '-c:v',
-        'libx264',
-        '-tune',
-        'stillimage',
-        '-c:a',
-        'aac',
-        '-b:a',
-        '192k',
-        '-pix_fmt',
-        'yuv420p',
-        '-r',
-        String(opts.fps),
-        '-vf',
-        `scale=${opts.width}:${opts.height}:force_original_aspect_ratio=decrease,pad=${opts.width}:${opts.height}:(ow-iw)/2:(oh-ih)/2:black`,
-        '-shortest',
-        '-movflags',
-        '+faststart',
+        '-loop', '1',
+        '-framerate', String(opts.fps),
+        '-t', durationStr,
+        '-i', imagePath,
+        '-i', audioPath,
+        // -map order pins the streams; otherwise ffmpeg may pick the audio
+        // from input 0 (anullsrc would fall back) and ignore the real audio.
+        '-map', '0:v:0',
+        '-map', '1:a:0',
+        '-vf', vfScale,
+        // `apad` extends the audio with silence so atrim can land exactly
+        // on the frame boundary; aresample fixes any rate mismatch between
+        // tts outputs (commonly 22050/24000 Hz mono).
+        '-af', `aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,apad,atrim=end=${durationStr},asetpts=N/SR/TB`,
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-tune', 'stillimage',
+        '-pix_fmt', 'yuv420p',
+        '-r', String(opts.fps),
+        '-fps_mode', 'cfr',
+        '-c:a', 'aac',
+        '-b:a', AUDIO_BITRATE,
+        '-ar', String(AUDIO_SAMPLE_RATE),
+        '-ac', String(AUDIO_CHANNELS),
+        '-movflags', '+faststart',
         segmentPath,
       ]);
     } else {
-      const durationSec = Math.max(1, (s.fallbackDurationMs ?? DEFAULT_FALLBACK_MS) / 1000);
+      const fallbackMs = s.fallbackDurationMs ?? DEFAULT_FALLBACK_MS;
+      const durationSec = Math.max(
+        frameDurSec,
+        Math.ceil(fallbackMs / 1000 / frameDurSec) * frameDurSec,
+      );
+      const durationStr = durationSec.toFixed(3);
+
       await runFfmpeg([
         '-y',
-        '-loop',
-        '1',
-        '-i',
-        imagePath,
-        '-f',
-        'lavfi',
-        '-i',
-        'anullsrc=r=44100:cl=stereo',
-        '-c:v',
-        'libx264',
-        '-tune',
-        'stillimage',
-        '-c:a',
-        'aac',
-        '-b:a',
-        '64k',
-        '-pix_fmt',
-        'yuv420p',
-        '-r',
-        String(opts.fps),
-        '-vf',
-        `scale=${opts.width}:${opts.height}:force_original_aspect_ratio=decrease,pad=${opts.width}:${opts.height}:(ow-iw)/2:(oh-ih)/2:black`,
-        '-t',
-        durationSec.toFixed(2),
-        '-movflags',
-        '+faststart',
+        '-loop', '1',
+        '-framerate', String(opts.fps),
+        '-t', durationStr,
+        '-i', imagePath,
+        '-f', 'lavfi',
+        '-t', durationStr,
+        '-i', `anullsrc=channel_layout=stereo:sample_rate=${AUDIO_SAMPLE_RATE}`,
+        '-map', '0:v:0',
+        '-map', '1:a:0',
+        '-vf', vfScale,
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-tune', 'stillimage',
+        '-pix_fmt', 'yuv420p',
+        '-r', String(opts.fps),
+        '-fps_mode', 'cfr',
+        '-c:a', 'aac',
+        '-b:a', AUDIO_BITRATE,
+        '-ar', String(AUDIO_SAMPLE_RATE),
+        '-ac', String(AUDIO_CHANNELS),
+        '-movflags', '+faststart',
         segmentPath,
       ]);
     }
@@ -187,26 +234,77 @@ async function renderSegments(
 
 async function concatSegments(
   segments: string[],
-  workdir: string,
+  _workdir: string,
   outputPath: string,
 ): Promise<void> {
-  const listPath = path.join(workdir, 'list.txt');
-  const body = segments.map((p) => `file '${p.replace(/'/g, `'\\''`)}'`).join('\n');
-  await writeFile(listPath, body);
-  await runFfmpeg([
-    '-y',
-    '-f',
-    'concat',
-    '-safe',
-    '0',
-    '-i',
-    listPath,
-    '-c',
-    'copy',
-    '-movflags',
-    '+faststart',
+  // We intentionally do NOT use the concat demuxer with `-c copy` here.
+  // That path is the fastest, but it only stitches packets — segment-to-
+  // segment timestamp skew survives untouched and shows up as audio
+  // dropouts and A/V lip-sync drift in the player. The concat FILTER
+  // graph re-encodes once and yields a gapless, A/V-locked output.
+  const args: string[] = ['-y'];
+  for (const seg of segments) {
+    args.push('-i', seg);
+  }
+
+  const n = segments.length;
+  const filterParts: string[] = [];
+  for (let i = 0; i < n; i++) {
+    filterParts.push(`[${i}:v:0]setsar=1,fps=30[v${i}]`);
+    filterParts.push(`[${i}:a:0]aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0[a${i}]`);
+  }
+  let concatInputs = '';
+  for (let i = 0; i < n; i++) concatInputs += `[v${i}][a${i}]`;
+  filterParts.push(`${concatInputs}concat=n=${n}:v=1:a=1[v][a]`);
+  const filter = filterParts.join(';');
+
+  args.push(
+    '-filter_complex', filter,
+    '-map', '[v]',
+    '-map', '[a]',
+    '-c:v', 'libx264',
+    '-preset', 'medium',
+    '-pix_fmt', 'yuv420p',
+    '-fps_mode', 'cfr',
+    '-c:a', 'aac',
+    '-b:a', AUDIO_BITRATE,
+    '-ar', String(AUDIO_SAMPLE_RATE),
+    '-ac', String(AUDIO_CHANNELS),
+    '-movflags', '+faststart',
     outputPath,
-  ]);
+  );
+
+  await runFfmpeg(args);
+}
+
+function probeAudioDuration(filePath: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(
+      'ffprobe',
+      [
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        filePath,
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    let stdout = '';
+    let stderr = '';
+    proc.stdout?.on('data', (c: Buffer) => (stdout += c.toString('utf8')));
+    proc.stderr?.on('data', (c: Buffer) => (stderr += c.toString('utf8')));
+    proc.on('error', reject);
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        return reject(new Error(`ffprobe exited ${code}: ${stderr.slice(0, 400)}`));
+      }
+      const dur = parseFloat(stdout.trim());
+      if (!Number.isFinite(dur) || dur <= 0) {
+        return reject(new Error(`ffprobe returned invalid duration: ${stdout}`));
+      }
+      resolve(dur);
+    });
+  });
 }
 
 async function streamFile(filePath: string): Promise<Buffer> {
