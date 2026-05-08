@@ -16,8 +16,13 @@
 
 ## 빠른 시작
 
+### 처음 설치하는 분
+
 ```bash
+git clone https://github.com/reallygood83/master-of-slide.git
+cd master-of-slide
 pnpm install
+pnpm install:agents   # /slide 스킬을 ~/.claude, ~/.codex에 설치
 pnpm dev:demo
 ```
 
@@ -27,7 +32,36 @@ pnpm dev:demo
 http://127.0.0.1:5173/
 ```
 
-새 워크스페이스를 만들 때는 CLI를 사용할 수 있습니다.
+### 🔄 이미 클론한 분 — 최신으로 업데이트
+
+이미 한 번 클론하셨다면 머신·환경에 상관없이 한 줄이면 끝납니다.
+
+```bash
+pnpm refresh
+```
+
+이 한 줄이 처리하는 것:
+
+1. `git pull --ff-only origin <현재 브랜치>` (다른 브랜치라면 자동 감지)
+2. `pnpm install` (변경된 의존성 동기화)
+3. `pnpm --filter @open-slide/core build` (dev 서버가 새 plugin 코드를 픽업)
+4. `pnpm install:agents` (`/slide` 스킬·명령 재배포)
+5. macOS LaunchAgent `com.openslide.dev`가 떠 있으면 자동 재시작
+6. **이번 풀로 들어온 커밋과 카테고리(슬라이드·프레임워크·문서·의존성)를 요약 출력**
+
+자동 알림: `pnpm dev` / `pnpm dev:demo`로 dev 서버를 켤 때마다 origin과 비교해
+**X commits behind origin/main**일 때 짧은 안내 배너가 한 번 출력됩니다.
+조용히 띄우고 싶으면 환경변수 한 줄:
+
+```bash
+export OPENSLIDE_NO_UPDATE_CHECK=1
+```
+
+자세한 옵션(다른 브랜치 풀, 서버 재시작 생략 등)은 아래 [`pnpm refresh` 옵션](#한-번에-업데이트-pnpm-refresh) 섹션을 참고하세요.
+
+### 새 워크스페이스를 만들 때
+
+별도 워크스페이스로 시작하려면 CLI를 쓸 수 있습니다.
 
 ```bash
 npx @open-slide/cli init my-slide

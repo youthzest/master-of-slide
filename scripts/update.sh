@@ -56,6 +56,8 @@ fi
 
 step "Pulling origin/$BRANCH"
 git fetch origin "$BRANCH"
+PULLED_FROM=""
+PULLED_TO=""
 if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
   warn "origin/$BRANCH does not exist — nothing to pull. Skipping."
 else
@@ -67,6 +69,8 @@ else
     ahead=$(git rev-list --count "$LOCAL..$REMOTE")
     ok "$ahead new commit(s) available — fast-forwarding"
     git merge --ff-only "origin/$BRANCH"
+    PULLED_FROM="$LOCAL"
+    PULLED_TO="$REMOTE"
   else
     behind=$(git rev-list --count "$LOCAL..$REMOTE")
     ahead_local=$(git rev-list --count "$REMOTE..$LOCAL")
@@ -104,3 +108,44 @@ step "Done"
 git --no-pager log --oneline -1
 echo
 echo "Open http://127.0.0.1:5173/ to see the updated build."
+
+# ── What's new in this pull ──────────────────────────────────────────────
+# When something was actually pulled, summarise the incoming commits and
+# flag the categories of change that most affect users (new slides, framework
+# code, docs, dependencies). Skipped silently when the working tree was
+# already up to date.
+if [ -n "$PULLED_FROM" ] && [ -n "$PULLED_TO" ]; then
+  echo
+  step "What changed in this update"
+
+  echo "  Commits ($(git rev-list --count "$PULLED_FROM..$PULLED_TO") total):"
+  git --no-pager log \
+    --no-merges \
+    --pretty=format:'    %h %s' \
+    -10 \
+    "$PULLED_FROM..$PULLED_TO"
+  echo
+
+  changed_files=$(git diff --name-only "$PULLED_FROM..$PULLED_TO")
+
+  highlight() {
+    local label="$1"
+    local pattern="$2"
+    local count
+    count=$(printf '%s\n' "$changed_files" | grep -E -c "$pattern" || true)
+    if [ "$count" -gt 0 ]; then
+      echo "  • $label: $count file(s)"
+    fi
+  }
+
+  if [ -n "$changed_files" ]; then
+    echo
+    echo "  Highlights:"
+    highlight "New / changed slides"        '^apps/demo/slides/|^slides/'
+    highlight "Framework (@open-slide/core)" '^packages/core/'
+    highlight "CLI (@open-slide/cli)"        '^packages/cli/'
+    highlight "Agents / skills"              '^\.agents/|^scripts/install-agent-workflow'
+    highlight "Docs / README"                '^README|^docs/|CLAUDE\.md$'
+    highlight "Dependencies (package.json)"  'package\.json$|pnpm-lock\.yaml$'
+  fi
+fi
