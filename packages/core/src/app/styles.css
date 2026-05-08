@@ -77,52 +77,121 @@
   --shadow-overlay: 10px 10px 0 var(--foreground);
 }
 
+/*
+ * British vintage WebUI theme.
+ *
+ *   bg     deep racing green   #0e2920
+ *   text   parchment cream     #f4ecd8
+ *   accent warm gold           #d4a843
+ *   alt    oxblood             #7a2f25
+ *   chart  mint, copper, gold, oxblood, mauve
+ *
+ * Designed for 40–50대 audience reading old-world editorial dashboards;
+ * keeps the neo-brutalism component shapes (thick borders, hard shadows)
+ * but recolors them onto a club-library palette. The original cream/black
+ * neo-brutalism :root is kept commented out below so reverting is a
+ * single-block paste.
+ */
 :root {
-  --background: oklch(0.965 0.055 96);
-  --foreground: oklch(0.13 0.012 260);
-  --canvas: oklch(0.92 0.045 95);
+  /* Surfaces */
+  --background: oklch(0.21 0.03 165);
+  --foreground: oklch(0.94 0.05 90);
+  --canvas: oklch(0.18 0.03 165);
 
-  --card: oklch(0.995 0.01 95);
-  --card-foreground: oklch(0.13 0.012 260);
-  --popover: oklch(0.995 0.01 95);
-  --popover-foreground: oklch(0.13 0.012 260);
+  --card: oklch(0.25 0.03 165);
+  --card-foreground: oklch(0.94 0.05 90);
+  --popover: oklch(0.25 0.03 165);
+  --popover-foreground: oklch(0.94 0.05 90);
 
-  --primary: oklch(0.13 0.012 260);
-  --primary-foreground: oklch(0.965 0.055 96);
-  --secondary: oklch(0.88 0.17 88);
-  --secondary-foreground: oklch(0.13 0.012 260);
-  --muted: oklch(0.88 0.03 250);
-  --muted-foreground: oklch(0.34 0.02 260);
-  --accent: oklch(0.83 0.16 200);
-  --accent-foreground: oklch(0.13 0.012 260);
-  --destructive: oklch(0.61 0.22 30);
+  /* Roles */
+  --primary: oklch(0.94 0.05 90);
+  --primary-foreground: oklch(0.21 0.03 165);
+  --secondary: oklch(0.42 0.13 28);
+  --secondary-foreground: oklch(0.94 0.05 90);
+  --muted: oklch(0.30 0.03 165);
+  --muted-foreground: oklch(0.74 0.04 90);
+  --accent: oklch(0.78 0.13 80);
+  --accent-foreground: oklch(0.18 0.03 165);
+  --destructive: oklch(0.55 0.18 25);
 
-  --border: oklch(0.13 0.012 260);
-  --hairline: oklch(0.13 0.012 260);
-  --input: oklch(0.13 0.012 260);
-  --ring: oklch(0.61 0.22 30);
+  /* Lines */
+  --border: oklch(0.78 0.13 80);
+  --hairline: oklch(0.65 0.10 80);
+  --input: oklch(0.78 0.13 80);
+  --ring: oklch(0.85 0.13 80);
 
-  --brand: oklch(0.62 0.22 30);
-  --brand-foreground: oklch(0.99 0.02 96);
-  --brand-soft: oklch(0.88 0.17 88);
+  /* Brand */
+  --brand: oklch(0.78 0.13 80);
+  --brand-foreground: oklch(0.18 0.03 165);
+  --brand-soft: oklch(0.42 0.13 28);
 
-  --chart-1: oklch(0.62 0.22 30);
-  --chart-2: oklch(0.83 0.16 200);
-  --chart-3: oklch(0.88 0.17 88);
-  --chart-4: oklch(0.64 0.17 145);
-  --chart-5: oklch(0.72 0.16 320);
+  /* Charts (mint / copper / gold / oxblood / mauve) */
+  --chart-1: oklch(0.78 0.13 80);
+  --chart-2: oklch(0.74 0.12 165);
+  --chart-3: oklch(0.70 0.10 30);
+  --chart-4: oklch(0.55 0.15 25);
+  --chart-5: oklch(0.72 0.10 320);
 
   --radius: 0.125rem;
 
-  --sidebar: oklch(0.88 0.17 88);
-  --sidebar-foreground: oklch(0.13 0.012 260);
-  --sidebar-primary: oklch(0.13 0.012 260);
-  --sidebar-primary-foreground: oklch(0.965 0.055 96);
-  --sidebar-accent: oklch(0.83 0.16 200);
-  --sidebar-accent-foreground: oklch(0.13 0.012 260);
-  --sidebar-border: oklch(0.13 0.012 260);
-  --sidebar-ring: oklch(0.61 0.22 30);
+  /* Sidebar reads slightly darker for "library shelf" depth */
+  --sidebar: oklch(0.18 0.03 165);
+  --sidebar-foreground: oklch(0.94 0.05 90);
+  --sidebar-primary: oklch(0.94 0.05 90);
+  --sidebar-primary-foreground: oklch(0.18 0.03 165);
+  --sidebar-accent: oklch(0.78 0.13 80);
+  --sidebar-accent-foreground: oklch(0.18 0.03 165);
+  --sidebar-border: oklch(0.78 0.13 80);
+  --sidebar-ring: oklch(0.85 0.13 80);
+
+  /*
+   * Neo-brutalism shadows are foreground-colored (cream on green here),
+   * which read as a parchment-stamp effect — fitting for the club-library
+   * feel. If they ever feel too loud, override the three vars below to
+   * something closer to oklch(0.10 0.03 165) for a subtler ink shadow.
+   */
 }
+
+/* ── Original neo-brutalism :root (cream + black + warm yellow) ─────────────
+ * Restore by replacing the block above with:
+ *
+ *   --background: oklch(0.965 0.055 96);
+ *   --foreground: oklch(0.13 0.012 260);
+ *   --canvas: oklch(0.92 0.045 95);
+ *   --card: oklch(0.995 0.01 95);
+ *   --card-foreground: oklch(0.13 0.012 260);
+ *   --popover: oklch(0.995 0.01 95);
+ *   --popover-foreground: oklch(0.13 0.012 260);
+ *   --primary: oklch(0.13 0.012 260);
+ *   --primary-foreground: oklch(0.965 0.055 96);
+ *   --secondary: oklch(0.88 0.17 88);
+ *   --secondary-foreground: oklch(0.13 0.012 260);
+ *   --muted: oklch(0.88 0.03 250);
+ *   --muted-foreground: oklch(0.34 0.02 260);
+ *   --accent: oklch(0.83 0.16 200);
+ *   --accent-foreground: oklch(0.13 0.012 260);
+ *   --destructive: oklch(0.61 0.22 30);
+ *   --border: oklch(0.13 0.012 260);
+ *   --hairline: oklch(0.13 0.012 260);
+ *   --input: oklch(0.13 0.012 260);
+ *   --ring: oklch(0.61 0.22 30);
+ *   --brand: oklch(0.62 0.22 30);
+ *   --brand-foreground: oklch(0.99 0.02 96);
+ *   --brand-soft: oklch(0.88 0.17 88);
+ *   --chart-1: oklch(0.62 0.22 30);
+ *   --chart-2: oklch(0.83 0.16 200);
+ *   --chart-3: oklch(0.88 0.17 88);
+ *   --chart-4: oklch(0.64 0.17 145);
+ *   --chart-5: oklch(0.72 0.16 320);
+ *   --sidebar: oklch(0.88 0.17 88);
+ *   --sidebar-foreground: oklch(0.13 0.012 260);
+ *   --sidebar-primary: oklch(0.13 0.012 260);
+ *   --sidebar-primary-foreground: oklch(0.965 0.055 96);
+ *   --sidebar-accent: oklch(0.83 0.16 200);
+ *   --sidebar-accent-foreground: oklch(0.13 0.012 260);
+ *   --sidebar-border: oklch(0.13 0.012 260);
+ *   --sidebar-ring: oklch(0.61 0.22 30);
+ */
 
 .dark {
   --background: oklch(0.18 0.02 260);
