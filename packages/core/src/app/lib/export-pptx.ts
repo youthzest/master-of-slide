@@ -57,31 +57,39 @@ export async function createPptxBlob(
     // matches the on-screen design exactly.
     page.addImage({ data: data.png, x: 0, y: 0, w: SLIDE_W, h: SLIDE_H });
 
-    // Layer 2 — native text overlays so PowerPoint, Keynote, and Canva can
-    // edit, search, translate, and reflow every word. Without this every
-    // slide is a single rasterized bitmap and every external editor "breaks"
-    // the design.
-    for (const t of data.texts) {
+    // Layer 2 — native text frames (one per block-level parent). Each frame
+    // packs all of its inline runs (<strong>, <span style={{color}}>, etc.)
+    // into a single `addText([{...},{...}])` call so PowerPoint/Keynote/Canva
+    // see one text box with multi-format runs — never overlapping boxes.
+    for (const frame of data.frames) {
       try {
-        page.addText(t.text, {
-          x: t.x,
-          y: t.y,
-          w: t.w,
-          h: t.h,
-          fontFace: t.fontFace,
-          fontSize: t.fontSize,
-          color: t.color,
-          bold: t.bold,
-          italic: t.italic,
-          align: t.align,
-          valign: t.valign,
+        const runs = frame.runs.map((r) => ({
+          text: r.text,
+          options: {
+            color: r.color,
+            bold: r.bold,
+            italic: r.italic,
+            fontFace: r.fontFace,
+            fontSize: r.fontSize,
+          },
+        }));
+        page.addText(runs, {
+          x: frame.x,
+          y: frame.y,
+          w: frame.w,
+          h: frame.h,
+          fontFace: frame.defaultFontFace,
+          fontSize: frame.defaultFontSize,
+          align: frame.align,
+          valign: frame.valign,
           margin: 0,
           isTextBox: true,
           autoFit: false,
+          wrap: true,
         });
       } catch {
         // pptxgenjs occasionally rejects edge-case font/colors. Skipping a
-        // single overlay still keeps the slide visually correct via Layer 1.
+        // single frame still keeps the slide visually correct via Layer 1.
       }
     }
 
@@ -122,8 +130,18 @@ export async function renderPagesToPng(
 // Hybrid renderer — captures background PNG + native text entries.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type PptxTextEntry = {
+export type PptxTextRun = {
   text: string;
+  /** Points. */
+  fontSize: number;
+  fontFace: string;
+  /** Hex without leading '#'. */
+  color: string;
+  bold: boolean;
+  italic: boolean;
+};
+
+export type PptxTextFrame = {
   /** Inches from slide left. */
   x: number;
   /** Inches from slide top. */
@@ -132,22 +150,20 @@ export type PptxTextEntry = {
   w: number;
   /** Inches. */
   h: number;
-  /** Points. */
-  fontSize: number;
-  fontFace: string;
-  /** Hex without leading '#'. */
-  color: string;
-  bold: boolean;
-  italic: boolean;
   align: 'left' | 'center' | 'right';
   valign: 'top' | 'middle' | 'bottom';
+  /** Points. Used as default for runs without explicit size. */
+  defaultFontSize: number;
+  defaultFontFace: string;
+  /** One or more inline runs (e.g. plain text + <strong> + colored span). */
+  runs: PptxTextRun[];
 };
 
 export type PptxPageData = {
   /** Data URL (image/png). Background layer with text rendered transparent. */
   png: string;
-  /** Native text overlays in PPTX inch coordinates. */
-  texts: PptxTextEntry[];
+  /** Native text frames in PPTX inch coordinates, one per block-level container. */
+  frames: PptxTextFrame[];
 };
 
 export async function renderPagesToPptxData(
@@ -198,13 +214,15 @@ export async function renderPagesToPptxData(
       await nextPaint();
       materializeComputedStyles(host);
 
-      // 1. Extract text entries while the page is still fully visible.
-      const texts = extractText ? extractTextEntries(host) : [];
+      // 1. Extract text frames (one per block-level container, packed with
+      //    inline runs) while the page is still fully visible.
+      const frames = extractText ? extractTextFrames(host) : [];
 
       // 2. Hide text in the DOM so the captured PNG holds only the visual
       //    backdrop. Without this we'd paint every word twice (raster +
       //    native), and edits to the native overlay would silently disagree
-      //    with the bitmap underneath.
+      //    with the bitmap underneath. Also strips text-shadow and
+      //    -webkit-text-stroke so glow/halo doesn't bleed through.
       const restoreTextColors = extractText ? hideAllTextColors(host) : () => {};
       await nextPaint();
       const png = await toPng(host, {
@@ -216,7 +234,7 @@ export async function renderPagesToPptxData(
       });
       restoreTextColors();
 
-      result.push({ png, texts });
+      result.push({ png, frames });
       root.unmount();
       container.removeChild(host);
     }
@@ -227,78 +245,181 @@ export async function renderPagesToPptxData(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Text extraction — DOM walker that finds every visible text node, computes
-// its on-canvas rectangle, and projects it into PPTX inch coordinates.
+// Text frame extraction — group inline runs (<strong>, colored <span>, plain
+// text) under their nearest block-level ancestor so PPTX gets ONE text box
+// per block with multi-format runs, instead of N overlapping boxes per inline
+// node. This is what "fixes the broken layout" in PowerPoint/Keynote/Canva.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function extractTextEntries(host: HTMLElement): PptxTextEntry[] {
-  const entries: PptxTextEntry[] = [];
+const BLOCK_DISPLAYS = new Set([
+  'block',
+  'flex',
+  'grid',
+  'inline-block',
+  'inline-flex',
+  'inline-grid',
+  'list-item',
+  'table',
+  'table-cell',
+  'table-row',
+  'table-row-group',
+]);
+
+function extractTextFrames(host: HTMLElement): PptxTextFrame[] {
+  const frames: PptxTextFrame[] = [];
   const hostRect = host.getBoundingClientRect();
-  if (hostRect.width === 0 || hostRect.height === 0) return entries;
+  if (hostRect.width === 0 || hostRect.height === 0) return frames;
   const sx = SLIDE_W / hostRect.width;
   const sy = SLIDE_H / hostRect.height;
 
-  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      const text = node.textContent;
-      if (!text || !text.trim()) return NodeFilter.FILTER_REJECT;
-      const parent = (node as Text).parentElement;
-      if (!parent) return NodeFilter.FILTER_REJECT;
-      if (!isVisibleForExport(parent, host)) return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
-    },
-  });
+  // Walk all elements; for each block-level container that has at least one
+  // direct or inline-only text child, emit a frame containing every inline
+  // descendant text run. Block descendants are NOT collected — they will get
+  // their own frame on a later iteration.
+  const allElements = [host, ...Array.from(host.querySelectorAll<HTMLElement>('*'))];
 
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
-    const textNode = node as Text;
-    const text = textNode.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-    if (!text) continue;
-    const parent = textNode.parentElement;
-    if (!parent) continue;
-    const computed = getComputedStyle(parent);
+  for (const el of allElements) {
+    if (!isBlockLevel(el)) continue;
+    if (!isVisibleForExport(el, host)) continue;
+    if (!containsLeafInlineText(el)) continue;
 
-    // The bounding rect of the parent block is more stable than the range
-    // rect for justified / wrapped paragraphs and matches PowerPoint's
-    // text-frame model (text fills its container box).
-    const rect = parent.getBoundingClientRect();
+    const runs: PptxTextRun[] = [];
+    collectInlineRuns(el, runs, host);
+    if (runs.length === 0) continue;
+    // Drop frames that ended up with only whitespace/punctuation noise.
+    if (runs.every((r) => /^[\s,.·]+$/.test(r.text))) continue;
+
+    const rect = el.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) continue;
 
-    const fontSizePx = parseFloatOr(computed.fontSize, 16);
-    const fontWeightNum = parseFloatOr(computed.fontWeight, 400);
-
-    const align: PptxTextEntry['align'] =
-      computed.textAlign === 'center'
+    const blockStyle = getComputedStyle(el);
+    const align: PptxTextFrame['align'] =
+      blockStyle.textAlign === 'center'
         ? 'center'
-        : computed.textAlign === 'right'
+        : blockStyle.textAlign === 'right'
           ? 'right'
           : 'left';
+    const valign: PptxTextFrame['valign'] = inferVerticalAlign(blockStyle);
 
-    // Block-level text containers report their full height; align vertically
-    // so single-line headings sit centered inside the box.
-    const valign: PptxTextEntry['valign'] = inferVerticalAlign(parent, computed);
-
-    entries.push({
-      text,
+    frames.push({
       x: clamp((rect.left - hostRect.left) * sx, 0, SLIDE_W),
       y: clamp((rect.top - hostRect.top) * sy, 0, SLIDE_H),
       w: clamp(rect.width * sx, 0.05, SLIDE_W),
       h: clamp(rect.height * sy, 0.05, SLIDE_H),
-      // px → pt (96dpi → 72pt/in)
-      fontSize: Math.max(6, +(fontSizePx * 0.75).toFixed(1)),
-      fontFace: primaryFontFace(computed.fontFamily),
-      color: rgbToHex(computed.color, '111111'),
-      bold: fontWeightNum >= 600 || computed.fontWeight === 'bold',
-      italic: computed.fontStyle === 'italic',
       align,
       valign,
+      defaultFontFace: primaryFontFace(blockStyle.fontFamily),
+      defaultFontSize: Math.max(6, +(parseFloatOr(blockStyle.fontSize, 16) * 0.75).toFixed(1)),
+      runs: mergeAdjacentEqualRuns(runs),
     });
   }
 
-  // Stable sort by reading order so PowerPoint's tab-cycle through shapes
-  // matches the visual top-to-bottom flow.
-  entries.sort((a, b) => a.y - b.y || a.x - b.x);
-  return entries;
+  // Sort by reading order so PowerPoint's tab-cycle through shapes matches
+  // the visual top-to-bottom flow.
+  frames.sort((a, b) => a.y - b.y || a.x - b.x);
+  return frames;
+}
+
+function isBlockLevel(el: HTMLElement): boolean {
+  const cs = getComputedStyle(el);
+  return BLOCK_DISPLAYS.has(cs.display);
+}
+
+/**
+ * Returns true when `el` directly contains text or contains text only inside
+ * inline descendants (i.e. it is the deepest block wrapping its inline copy).
+ * Block descendants are ignored — they'll be processed in their own iteration.
+ */
+function containsLeafInlineText(el: HTMLElement): boolean {
+  for (const child of Array.from(el.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      if ((child.textContent?.trim().length ?? 0) > 0) return true;
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
+    const childEl = child as HTMLElement;
+    // A block child gets its own frame; do not count its text toward `el`.
+    if (isBlockLevel(childEl)) continue;
+    if (containsAnyInlineText(childEl)) return true;
+  }
+  return false;
+}
+
+function containsAnyInlineText(el: HTMLElement): boolean {
+  for (const child of Array.from(el.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      if ((child.textContent?.trim().length ?? 0) > 0) return true;
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
+    const childEl = child as HTMLElement;
+    if (isBlockLevel(childEl)) continue; // boundary — stop descending here
+    if (containsAnyInlineText(childEl)) return true;
+  }
+  return false;
+}
+
+/**
+ * Depth-first collection of inline text runs starting at `block`. Stops at
+ * any block-level descendant boundary so we never duplicate text that another
+ * frame will already cover.
+ */
+function collectInlineRuns(block: HTMLElement, runs: PptxTextRun[], host: HTMLElement): void {
+  for (const child of Array.from(block.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const raw = child.textContent ?? '';
+      if (!raw.trim()) continue;
+      const parent = (child as Text).parentElement;
+      if (!parent || !isVisibleForExport(parent, host)) continue;
+      const cs = getComputedStyle(parent);
+      runs.push(makeRun(raw, cs));
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
+    const childEl = child as HTMLElement;
+    if (childEl instanceof HTMLImageElement) continue;
+    if (childEl instanceof HTMLBRElement) {
+      runs.push({ text: '\n', fontSize: 12, fontFace: '', color: '000000', bold: false, italic: false });
+      continue;
+    }
+    if (isBlockLevel(childEl)) continue; // boundary
+    if (!isVisibleForExport(childEl, host)) continue;
+    collectInlineRuns(childEl, runs, host);
+  }
+}
+
+function makeRun(rawText: string, cs: CSSStyleDeclaration): PptxTextRun {
+  const fontWeightNum = parseFloatOr(cs.fontWeight, 400);
+  return {
+    // Collapse runs of whitespace but preserve a single leading/trailing
+    // space so adjacent runs don't get glued together visually.
+    text: rawText.replace(/[\t\n\r]+/g, ' ').replace(/ {2,}/g, ' '),
+    fontSize: Math.max(6, +(parseFloatOr(cs.fontSize, 16) * 0.75).toFixed(1)),
+    fontFace: primaryFontFace(cs.fontFamily),
+    color: rgbToHex(cs.color, '111111'),
+    bold: fontWeightNum >= 600 || cs.fontWeight === 'bold',
+    italic: cs.fontStyle === 'italic',
+  };
+}
+
+function mergeAdjacentEqualRuns(runs: PptxTextRun[]): PptxTextRun[] {
+  const merged: PptxTextRun[] = [];
+  for (const run of runs) {
+    const prev = merged[merged.length - 1];
+    if (
+      prev &&
+      prev.color === run.color &&
+      prev.bold === run.bold &&
+      prev.italic === run.italic &&
+      prev.fontFace === run.fontFace &&
+      prev.fontSize === run.fontSize
+    ) {
+      prev.text += run.text;
+    } else {
+      merged.push({ ...run });
+    }
+  }
+  return merged;
 }
 
 function isVisibleForExport(start: Element, host: HTMLElement): boolean {
@@ -314,29 +435,39 @@ function isVisibleForExport(start: Element, host: HTMLElement): boolean {
   return true;
 }
 
-function inferVerticalAlign(el: HTMLElement, cs: CSSStyleDeclaration): PptxTextEntry['valign'] {
+function inferVerticalAlign(cs: CSSStyleDeclaration): PptxTextFrame['valign'] {
   // Honor inline alignment hints; default to top so multiline copy reads from
   // the box origin (matches HTML behavior).
   if (cs.alignItems === 'center' || cs.justifyContent === 'center') return 'middle';
   if (cs.alignItems === 'flex-end' || cs.justifyContent === 'flex-end') return 'bottom';
-  void el;
   return 'top';
 }
 
 function hideAllTextColors(host: HTMLElement): () => void {
   const restorations: Array<() => void> = [];
-  // Hide text by zeroing the rendered glyph color but keep the box layout
-  // intact. We use color: transparent rather than visibility:hidden so spans
-  // inside flex/grid containers keep their position.
+  // Hide text by zeroing the rendered glyph color and any glow/halo so the
+  // captured PNG carries pure background visuals only. We avoid
+  // `visibility:hidden` because it would collapse spans inside flex/grid
+  // containers and shift the layout we just measured.
   const walker = document.createTreeWalker(host, NodeFilter.SHOW_ELEMENT);
   let node: Node | null;
   while ((node = walker.nextNode())) {
     const el = node as HTMLElement;
     if (!hasDirectTextChild(el)) continue;
-    const orig = el.style.color;
+    const origColor = el.style.color;
+    const origShadow = el.style.textShadow;
+    const origStroke = el.style.webkitTextStroke;
+    const origFill = el.style.getPropertyValue('-webkit-text-fill-color');
     el.style.color = 'transparent';
+    el.style.textShadow = 'none';
+    el.style.webkitTextStroke = '0 transparent';
+    el.style.setProperty('-webkit-text-fill-color', 'transparent');
     restorations.push(() => {
-      el.style.color = orig;
+      el.style.color = origColor;
+      el.style.textShadow = origShadow;
+      el.style.webkitTextStroke = origStroke;
+      if (origFill) el.style.setProperty('-webkit-text-fill-color', origFill);
+      else el.style.removeProperty('-webkit-text-fill-color');
     });
   }
   return () => {
