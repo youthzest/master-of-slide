@@ -555,19 +555,29 @@ async function waitForFonts(): Promise<void> {
 }
 
 async function waitForAnimations(root: HTMLElement): Promise<void> {
-  // Export must capture the FINAL visual state, regardless of duration,
-  // delay, or iteration count. Awaiting `animation.finished` with a 1.5 s
-  // timeout used to leak mid-flight `opacity: 0` frames whenever a slide's
-  // total animation runtime (animationDelay + duration) exceeded the
-  // timeout — every glyph carrying the `r-fadeup` / `l-fadeup` keyframes
-  // would be captured invisible. That is exactly why the MP4 came out with
-  // most of its text missing.
+  // Export must capture the FINAL visual state — never a mid-flight frame.
+  // Three layers of defense, in order:
   //
-  // We now snap every animation to its terminal frame synchronously. With
-  // `animation-fill-mode: both | forwards`, that means the `to` state is
-  // pinned, so the captured PNG always matches the final on-screen design.
-  // For looping animations, finish() jumps to the end of the current
-  // iteration which is the only stable frame we can reliably capture.
+  //   1. animation.finish() snaps every running animation to its terminal
+  //      frame. With fill-mode "both" / "forwards" the to-state pins.
+  //
+  //   2. Some keyframes (notably `from { opacity: 0 }` entry effects with
+  //      explicit animationDelay) still leave the captured PNG reading
+  //      opacity ≈ 0 after finish() resolves on Chromium's offscreen
+  //      compositor — because the keyframe rules outrank our `to` pose
+  //      until the next style recalc. To kill that race, we strip the
+  //      `animation` property off every descendant. The element falls back
+  //      to its baseline pose (opacity 1, transform none) which is exactly
+  //      the pose every entry animation was animating *into*.
+  //
+  //   3. Finally we sweep computed opacity. Anything still reading below
+  //      ~1 is forced to opacity 1 inline. This catches the rare case
+  //      where the in-flight keyframe stamped an inline opacity on the
+  //      element from a previous run.
+  //
+  // Without all three layers MP4 export came back with every fade-in
+  // text invisible — only static (non-animated) elements like the footer
+  // chips and hero <img> survived.
   const animations = root.getAnimations?.({ subtree: true }) ?? [];
   for (const animation of animations) {
     try {
@@ -576,8 +586,30 @@ async function waitForAnimations(root: HTMLElement): Promise<void> {
       try {
         animation.cancel();
       } catch {
-        // Ignore — the current rendered frame is still safe to capture.
+        // Ignore — the next two layers will recover the visible pose.
       }
+    }
+  }
+
+  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+  for (const el of elements) {
+    // Layer 2 — disable any remaining animation declaration.
+    el.style.animation = 'none';
+    el.style.transition = 'none';
+  }
+
+  // Force a style recalc before the opacity sweep so getComputedStyle reads
+  // the post-`animation: none` value rather than the cached keyframe value.
+  void root.offsetHeight;
+
+  for (const el of elements) {
+    // Layer 3 — pin opacity. Skip elements that intentionally render
+    // hidden (e.g. design tokens like 0.05 highlight overlays); we only
+    // recover content that the design actually wanted visible.
+    const cs = getComputedStyle(el);
+    const op = parseFloat(cs.opacity || '1');
+    if (op > 0 && op < 0.99) {
+      el.style.opacity = '1';
     }
   }
 }
