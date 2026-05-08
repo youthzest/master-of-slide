@@ -86,6 +86,10 @@ export async function createPptxBlob(
           isTextBox: true,
           autoFit: false,
           wrap: true,
+          // Match the on-screen line-height so PowerPoint reproduces the
+          // same vertical rhythm. Without this PPT defaults to 1.0 spacing
+          // and multi-line copy compresses, drifting from the captured PNG.
+          lineSpacingMultiple: frame.lineHeightMultiple,
         });
       } catch {
         // pptxgenjs occasionally rejects edge-case font/colors. Skipping a
@@ -155,6 +159,8 @@ export type PptxTextFrame = {
   /** Points. Used as default for runs without explicit size. */
   defaultFontSize: number;
   defaultFontFace: string;
+  /** Multiple of single-line height (matches CSS line-height). */
+  lineHeightMultiple: number;
   /** One or more inline runs (e.g. plain text + <strong> + colored span). */
   runs: PptxTextRun[];
 };
@@ -309,7 +315,8 @@ function extractTextFrames(host: HTMLElement): PptxTextFrame[] {
       align,
       valign,
       defaultFontFace: primaryFontFace(blockStyle.fontFamily),
-      defaultFontSize: Math.max(6, +(parseFloatOr(blockStyle.fontSize, 16) * 0.75).toFixed(1)),
+      defaultFontSize: pxToPt(parseFloatOr(blockStyle.fontSize, 16)),
+      lineHeightMultiple: computeLineHeightMultiple(blockStyle),
       runs: mergeAdjacentEqualRuns(runs),
     });
   }
@@ -394,7 +401,7 @@ function makeRun(rawText: string, cs: CSSStyleDeclaration): PptxTextRun {
     // Collapse runs of whitespace but preserve a single leading/trailing
     // space so adjacent runs don't get glued together visually.
     text: rawText.replace(/[\t\n\r]+/g, ' ').replace(/ {2,}/g, ' '),
-    fontSize: Math.max(6, +(parseFloatOr(cs.fontSize, 16) * 0.75).toFixed(1)),
+    fontSize: pxToPt(parseFloatOr(cs.fontSize, 16)),
     fontFace: primaryFontFace(cs.fontFamily),
     color: rgbToHex(cs.color, '111111'),
     bold: fontWeightNum >= 600 || cs.fontWeight === 'bold',
@@ -681,4 +688,38 @@ function clamp(n: number, lo: number, hi: number): number {
 function parseFloatOr(value: string, fallback: number): number {
   const n = parseFloat(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+/**
+ * Convert a CSS pixel size to PPTX points using the canvas-to-slide ratio.
+ *
+ * Our authoring canvas is 1920×1080 CSS px and gets stretched to a
+ * 13.33"×7.5" PPTX slide (LAYOUT_WIDE). One canvas pixel therefore equals
+ * 1920 px / (13.33" × 96 dpi) = 1.5 logical px per slide px, which means
+ * one canvas pixel projects to 0.5 slide points (px × 7.5 in / 1080 × 72
+ * pt/in = px × 0.5).
+ *
+ * Using the standard 96-dpi conversion (px × 0.75) bloats every glyph by
+ * 50%, overflows its parent box, and produces the "PPTX is broken" feel
+ * users were seeing in PowerPoint, Keynote, and Canva.
+ */
+function pxToPt(px: number): number {
+  return Math.max(6, +(px * 0.5).toFixed(1));
+}
+
+/**
+ * Resolve the CSS line-height into a multiplier of the font size, suitable
+ * for pptxgenjs' `lineSpacingMultiple` option. Defaults to 1.2 when the
+ * style yields `normal`, matching most browsers' single-line rhythm.
+ */
+function computeLineHeightMultiple(cs: CSSStyleDeclaration): number {
+  const raw = cs.lineHeight;
+  if (!raw || raw === 'normal') return 1.2;
+  const fontPx = parseFloatOr(cs.fontSize, 16) || 16;
+  const lhPx = parseFloat(raw);
+  if (!Number.isFinite(lhPx) || lhPx <= 0) return 1.2;
+  // CSS line-height returns the resolved px even when authored unitless.
+  const ratio = lhPx / fontPx;
+  // Clamp to a sane range — pptxgenjs misrenders below 0.5 / above 4.
+  return Math.max(0.85, Math.min(3, +ratio.toFixed(2)));
 }
