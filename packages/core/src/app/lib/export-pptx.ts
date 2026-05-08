@@ -554,56 +554,32 @@ async function waitForFonts(): Promise<void> {
   if ('fonts' in document) await document.fonts.ready;
 }
 
-const ANIMATION_WAIT_TIMEOUT_MS = 1500;
-
-async function waitForAnimations(
-  root: HTMLElement,
-  timeoutMs = ANIMATION_WAIT_TIMEOUT_MS,
-): Promise<void> {
+async function waitForAnimations(root: HTMLElement): Promise<void> {
+  // Export must capture the FINAL visual state, regardless of duration,
+  // delay, or iteration count. Awaiting `animation.finished` with a 1.5 s
+  // timeout used to leak mid-flight `opacity: 0` frames whenever a slide's
+  // total animation runtime (animationDelay + duration) exceeded the
+  // timeout — every glyph carrying the `r-fadeup` / `l-fadeup` keyframes
+  // would be captured invisible. That is exactly why the MP4 came out with
+  // most of its text missing.
+  //
+  // We now snap every animation to its terminal frame synchronously. With
+  // `animation-fill-mode: both | forwards`, that means the `to` state is
+  // pinned, so the captured PNG always matches the final on-screen design.
+  // For looping animations, finish() jumps to the end of the current
+  // iteration which is the only stable frame we can reliably capture.
   const animations = root.getAnimations?.({ subtree: true }) ?? [];
-  if (animations.length === 0) return;
-
   for (const animation of animations) {
-    if (isLoopingAnimation(animation)) {
+    try {
+      animation.finish();
+    } catch {
       try {
-        animation.finish();
+        animation.cancel();
       } catch {
-        try {
-          animation.cancel();
-        } catch {
-          // Ignore — the current rendered frame is still safe to capture.
-        }
+        // Ignore — the current rendered frame is still safe to capture.
       }
     }
   }
-
-  const remaining = root.getAnimations?.({ subtree: true }) ?? [];
-  if (remaining.length === 0) return;
-
-  await Promise.race([
-    Promise.all(
-      remaining.map((animation) =>
-        animation.finished.then(
-          () => undefined,
-          () => undefined,
-        ),
-      ),
-    ),
-    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
-  ]);
-}
-
-function isLoopingAnimation(animation: Animation): boolean {
-  const effect = animation.effect;
-  if (!effect) return false;
-  try {
-    const timing = effect.getComputedTiming();
-    if (timing.iterations === Infinity) return true;
-    if (timing.endTime === Infinity) return true;
-  } catch {
-    // Some browsers throw on getComputedTiming for cancelled effects.
-  }
-  return false;
 }
 
 async function waitForImages(root: HTMLElement): Promise<void> {
