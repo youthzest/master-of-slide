@@ -1,4 +1,4 @@
-import { ExternalLink, Loader2, Mic, Play, Volume2 } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Loader2, Mic, Play, ShieldQuestion, Volume2, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -12,6 +12,7 @@ import {
   listVoices,
   saveVoiceConfig,
   synthesizeText,
+  testVoiceConnection,
 } from '../lib/voice';
 import { Button } from './ui/button';
 import {
@@ -65,6 +66,7 @@ export function VoiceSettingsDialog({
 
   const [apiKey, setApiKey] = useState('');
   const [voiceId, setVoiceId] = useState('');
+  const [testing, setTesting] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -92,10 +94,13 @@ export function VoiceSettingsDialog({
     };
   }, [open]);
 
-  // Refresh voices whenever provider switches and is configured
+  // Refresh voices whenever provider switches. Gemini's voice list is
+  // hard-coded server-side, so it works without a configured key — only
+  // ElevenLabs/MMX bail out early.
   useEffect(() => {
     if (!open) return;
-    if (!config?.hasKeys[provider]) {
+    const needsKeyForList = provider !== 'gemini';
+    if (needsKeyForList && !config?.hasKeys[provider]) {
       setVoices([]);
       return;
     }
@@ -105,18 +110,15 @@ export function VoiceSettingsDialog({
       .then((vs) => {
         if (cancelled) return;
         setVoices(vs);
-        // Don't clobber a user-entered custom voice ID. Only seed when the
-        // current state is empty or matches a stored/list value already.
+        // Don't clobber a user-entered custom voice ID for *this* provider.
+        // But cross-provider IDs (e.g. an ElevenLabs ID still sitting in the
+        // input after switching to Gemini) should not survive.
         setVoiceId((current) => {
-          const stored = config.defaultVoiceIds[provider];
-          if (current && !vs.some((v) => v.voiceId === current)) {
-            // User typed a custom ID (e.g. a shared/cloned voice not in
-            // their account list) — keep it.
-            return current;
-          }
+          const stored = config?.defaultVoiceIds[provider];
+          if (current && vs.some((v) => v.voiceId === current)) return current;
           if (stored) return stored;
           if (vs.length > 0) return vs[0].voiceId;
-          return current;
+          return '';
         });
       })
       .catch((err) => {
@@ -205,7 +207,16 @@ export function VoiceSettingsDialog({
             Provider
             <Select
               value={provider}
-              onValueChange={(v) => setProvider(v as VoiceProviderId)}
+              onValueChange={(v) => {
+                const next = v as VoiceProviderId;
+                setProvider(next);
+                // Reset voiceId immediately so an ID typed for a previous
+                // provider doesn't remain visible in the input field while
+                // listVoices() is still in flight for the new one.
+                setVoiceId(config?.defaultVoiceIds[next] ?? '');
+                setApiKey('');
+                setVoices([]);
+              }}
               disabled={loading}
             >
               <SelectTrigger className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]">
@@ -223,12 +234,48 @@ export function VoiceSettingsDialog({
             </Select>
           </label>
 
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-wide">
             <span>Status:</span>
             <span className={providerConfigured ? 'text-green-700' : 'text-amber-700'}>
               {providerConfigured ? '✓ Configured' : 'Not configured'}
             </span>
-            <Button asChild variant="ghost" size="sm" className="ml-auto h-7 px-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto h-7 px-2"
+              disabled={testing || (!apiKey.trim() && !providerConfigured)}
+              onClick={async () => {
+                setTesting(true);
+                try {
+                  const result = await testVoiceConnection(provider, {
+                    apiKey: apiKey.trim() || undefined,
+                    voiceId: voiceId.trim() || undefined,
+                  });
+                  if (result.ok) {
+                    toast.success(
+                      `${provider} OK · ${result.bytes ?? 0} bytes · ${result.durationMs ?? 0}ms`,
+                      { icon: <CheckCircle2 className="size-4 text-green-600" /> },
+                    );
+                  } else {
+                    toast.error(result.error ?? `${provider} test failed`, {
+                      icon: <XCircle className="size-4 text-red-600" />,
+                    });
+                  }
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Test failed');
+                } finally {
+                  setTesting(false);
+                }
+              }}
+            >
+              {testing ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <ShieldQuestion className="size-3.5" />
+              )}
+              Test connection
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="h-7 px-2">
               <a href={PROVIDER_DOCS[provider]} target="_blank" rel="noreferrer">
                 <ExternalLink className="size-3.5" /> Get API key
               </a>

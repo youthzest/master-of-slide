@@ -100,6 +100,35 @@ export async function synthesizeText(text: string, opts: SynthesizeOptions = {})
   return await res.blob();
 }
 
+export type VoiceTestResult = {
+  ok: boolean;
+  provider?: VoiceProviderId;
+  voiceId?: string;
+  bytes?: number;
+  durationMs?: number;
+  message?: string;
+  error?: string;
+};
+
+export async function testVoiceConnection(
+  provider: VoiceProviderId,
+  opts: { apiKey?: string; voiceId?: string } = {},
+): Promise<VoiceTestResult> {
+  const res = await fetch('/api/voice/test', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      provider,
+      apiKey: opts.apiKey?.trim() || undefined,
+      voiceId: opts.voiceId?.trim() || undefined,
+    }),
+  });
+  // The endpoint returns 200 with { ok: false, error } even on auth failure
+  // so the toast renderer can show a useful message instead of "Network error".
+  const data = (await safeJson(res)) ?? {};
+  return data as VoiceTestResult;
+}
+
 export async function cloneVoice(
   provider: VoiceProviderId,
   name: string,
