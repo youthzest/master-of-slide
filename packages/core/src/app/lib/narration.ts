@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import { type DesignSystem, defaultDesign, designToCssVars } from './design';
+import { defaultDesign, designToCssVars } from './design';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, type SlideModule } from './sdk';
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -22,12 +22,14 @@ export type VoiceStatus = {
   >;
   defaultProvider: VoiceProviderId | null;
   defaultVoiceIds: Record<VoiceProviderId, string | null>;
+  defaultModelIds: Record<VoiceProviderId, string>;
 };
 
 export type VoiceConfig = {
   hasKeys: Record<VoiceProviderId, boolean>;
   defaultProvider: VoiceProviderId | null;
   defaultVoiceIds: Record<VoiceProviderId, string | null>;
+  modelIds: Record<VoiceProviderId, string>;
 };
 
 export type VoiceConfigPayload = {
@@ -38,6 +40,9 @@ export type VoiceConfigPayload = {
   elevenlabsVoiceId?: string;
   geminiVoiceId?: string;
   mmxVoiceId?: string;
+  elevenlabsModelId?: string;
+  geminiModelId?: string;
+  mmxModelId?: string;
 };
 
 export type SynthesizeOptions = {
@@ -45,6 +50,97 @@ export type SynthesizeOptions = {
   voiceId?: string;
   modelId?: string;
   format?: 'mp3' | 'wav';
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Model registry — single source of truth for the dropdowns
+//
+// `id` is the value sent to the provider's API. `label` is for the dropdown.
+// `description` shows under the row to help users pick.
+// First entry of each provider is the recommended default.
+// Users can also paste a custom id via the free-form input below the
+// dropdown — useful for bleeding-edge or private models.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type VoiceModel = {
+  id: string;
+  label: string;
+  description: string;
+};
+
+export const MODELS_BY_PROVIDER: Record<VoiceProviderId, VoiceModel[]> = {
+  elevenlabs: [
+    {
+      id: 'eleven_multilingual_v2',
+      label: 'Multilingual v2 — recommended',
+      description: '29 languages, balanced quality/speed. Best default for Korean.',
+    },
+    {
+      id: 'eleven_v3',
+      label: 'v3 (alpha) — most expressive',
+      description: '70+ languages, latest emotional range. Higher latency.',
+    },
+    {
+      id: 'eleven_turbo_v2_5',
+      label: 'Turbo v2.5 — fast',
+      description: '32 languages, low-latency streaming.',
+    },
+    {
+      id: 'eleven_flash_v2_5',
+      label: 'Flash v2.5 — fastest',
+      description: '~75ms latency, 32 languages, lower fidelity.',
+    },
+    {
+      id: 'eleven_monolingual_v1',
+      label: 'Monolingual v1 (legacy)',
+      description: 'English only.',
+    },
+  ],
+  gemini: [
+    {
+      id: 'gemini-2.5-flash-preview-tts',
+      label: 'Gemini 2.5 Flash TTS — recommended',
+      description: 'Fast, low-cost, supports 30 prebuilt voices.',
+    },
+    {
+      id: 'gemini-2.5-pro-preview-tts',
+      label: 'Gemini 2.5 Pro TTS',
+      description: 'Higher quality, slower, more expensive.',
+    },
+  ],
+  mmx: [
+    {
+      id: 'speech-2.8-hd',
+      label: 'Speech 2.8 HD — recommended',
+      description: 'Latest HD model, best Korean and multilingual fidelity.',
+    },
+    {
+      id: 'speech-2.6-hd',
+      label: 'Speech 2.6 HD',
+      description: 'Stable HD generation, slightly older voice catalog.',
+    },
+    {
+      id: 'speech-02-hd',
+      label: 'Speech 02 HD (legacy)',
+      description: 'Earlier HD baseline, still supported.',
+    },
+    {
+      id: 'speech-01-turbo',
+      label: 'Speech 01 Turbo',
+      description: 'Fastest, lower fidelity.',
+    },
+    {
+      id: 'speech-01',
+      label: 'Speech 01',
+      description: 'Original baseline model.',
+    },
+  ],
+};
+
+export const DEFAULT_MODEL_ID: Record<VoiceProviderId, string> = {
+  elevenlabs: MODELS_BY_PROVIDER.elevenlabs[0].id,
+  gemini: MODELS_BY_PROVIDER.gemini[0].id,
+  mmx: MODELS_BY_PROVIDER.mmx[0].id,
 };
 
 export async function getVoiceStatus(): Promise<VoiceStatus> {
@@ -56,7 +152,11 @@ export async function getVoiceStatus(): Promise<VoiceStatus> {
 export async function getVoiceConfig(): Promise<VoiceConfig> {
   const res = await fetch('/api/voice/config');
   if (!res.ok) throw new Error(`Voice config load failed (${res.status}).`);
-  return (await res.json()) as VoiceConfig;
+  const raw = (await res.json()) as VoiceConfig & { modelIds?: Record<VoiceProviderId, string> };
+  // Older server builds (pre-model support) may not return modelIds; fill in
+  // safe defaults so the UI doesn't crash on an undefined lookup.
+  if (!raw.modelIds) raw.modelIds = { ...DEFAULT_MODEL_ID };
+  return raw;
 }
 
 export async function saveVoiceConfig(payload: VoiceConfigPayload): Promise<void> {
@@ -108,11 +208,12 @@ export type VoiceTestResult = {
   durationMs?: number;
   message?: string;
   error?: string;
+  saved?: boolean;
 };
 
 export async function testVoiceConnection(
   provider: VoiceProviderId,
-  opts: { apiKey?: string; voiceId?: string } = {},
+  opts: { apiKey?: string; voiceId?: string; modelId?: string; persist?: boolean } = {},
 ): Promise<VoiceTestResult> {
   const res = await fetch('/api/voice/test', {
     method: 'POST',
@@ -121,6 +222,8 @@ export async function testVoiceConnection(
       provider,
       apiKey: opts.apiKey?.trim() || undefined,
       voiceId: opts.voiceId?.trim() || undefined,
+      modelId: opts.modelId?.trim() || undefined,
+      persist: opts.persist,
     }),
   });
   // The endpoint returns 200 with { ok: false, error } even on auth failure
