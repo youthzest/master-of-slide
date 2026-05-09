@@ -8,8 +8,8 @@ import {
   usePresenterChannel,
 } from '../components/present/use-presenter-channel';
 import { SlideCanvas } from '../components/slide-canvas';
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../lib/sdk';
 import type { SlideModule } from '../lib/sdk';
+import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../lib/sdk';
 import { loadSlide } from '../lib/slides';
 
 export function Presenter() {

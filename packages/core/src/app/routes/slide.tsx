@@ -9,9 +9,9 @@ import {
   ImagePlus,
   Loader2,
   LogIn,
+  Mic2,
   Pencil,
   Play,
-  Mic2,
   Presentation,
   Settings,
   Volume2,
@@ -57,13 +57,13 @@ import { type AssetEntry, useAssets } from '@/lib/assets';
 import { useFolders } from '@/lib/folders';
 import { useWheelPageNavigation } from '@/lib/use-wheel-page-navigation';
 import { cn } from '@/lib/utils';
-import { ClickNavZones } from '../components/click-nav-zones';
 import { AudioStudioDialog } from '../components/audio-studio-dialog';
+import { ClickNavZones } from '../components/click-nav-zones';
 import { PdfProgressToast } from '../components/pdf-progress-toast';
-import { VoiceSettingsDialog } from '../components/voice-settings-dialog';
 import { Player } from '../components/player';
 import { SlideCanvas } from '../components/slide-canvas';
 import { ThumbnailRail } from '../components/thumbnail-rail';
+import { VoiceSettingsDialog } from '../components/voice-settings-dialog';
 import {
   type CanvaStatus,
   getCanvaStatus,
@@ -72,8 +72,8 @@ import {
   saveCanvaConfig,
 } from '../lib/canva';
 import { exportSlideAsHtml } from '../lib/export-html';
+import { exportSlideAsMp4, MP4_QUALITY_PRESETS, type Mp4Quality } from '../lib/export-mp4';
 import { exportSlideAsPdf } from '../lib/export-pdf';
-import { MP4_QUALITY_PRESETS, type Mp4Quality, exportSlideAsMp4 } from '../lib/export-mp4';
 import { exportSlideAsPptx } from '../lib/export-pptx';
 import {
   buildScriptEntries,
@@ -543,10 +543,10 @@ export function Slide() {
                                         );
                                       },
                                     });
-                                    toast.success(
-                                      `MP4 saved (${preset.label}).`,
-                                      { id, duration: 4000 },
-                                    );
+                                    toast.success(`MP4 saved (${preset.label}).`, {
+                                      id,
+                                      duration: 4000,
+                                    });
                                   } catch (err) {
                                     console.error('[open-slide] mp4 export failed', err);
                                     toast.error(

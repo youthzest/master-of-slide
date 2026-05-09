@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import posthog from 'posthog-js';
+import { useState } from 'react';
 
 export function CopyCommand({ command, size = 'lg' }: { command: string; size?: 'lg' | 'md' }) {
   const [copied, setCopied] = useState(false);

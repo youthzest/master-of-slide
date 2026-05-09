@@ -11,19 +11,19 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  cloneVoice,
   DEFAULT_MODEL_ID,
+  getVoiceConfig,
+  getVoiceStatus,
+  listVoices,
   MODELS_BY_PROVIDER,
+  saveVoiceConfig,
+  synthesizeText,
+  testVoiceConnection,
   type Voice,
   type VoiceConfig,
   type VoiceProviderId,
   type VoiceStatus,
-  cloneVoice,
-  getVoiceConfig,
-  getVoiceStatus,
-  listVoices,
-  saveVoiceConfig,
-  synthesizeText,
-  testVoiceConnection,
 } from '../lib/voice';
 import { Button } from './ui/button';
 import {
@@ -35,13 +35,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const PROVIDER_LABELS: Record<VoiceProviderId, string> = {
   elevenlabs: 'ElevenLabs',
@@ -144,7 +138,7 @@ export function VoiceSettingsDialog({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, provider, config?.hasKeys[provider]]);
+  }, [open, provider, config?.hasKeys[provider], config?.defaultVoiceIds]);
 
   const providerAvailable = status?.providers[provider]?.available ?? false;
   const providerConfigured = config?.hasKeys[provider] ?? false;
@@ -234,7 +228,7 @@ export function VoiceSettingsDialog({
         </DialogHeader>
 
         <div className="grid gap-4">
-          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Provider
             <Select
               value={provider}
@@ -263,7 +257,7 @@ export function VoiceSettingsDialog({
                 </SelectItem>
               </SelectContent>
             </Select>
-          </label>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-wide">
             <span>Status:</span>
@@ -329,7 +323,7 @@ export function VoiceSettingsDialog({
             </p>
           )}
 
-          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             API Key
             <Input
               type="password"
@@ -347,7 +341,7 @@ export function VoiceSettingsDialog({
               Pasted keys are auto-cleaned: hidden whitespace, BOM, and "Bearer " prefixes are
               stripped before saving so a 401 never comes from paste-noise.
             </p>
-          </label>
+          </div>
 
           <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Model
@@ -490,7 +484,9 @@ export function VoiceSettingsDialog({
               setCloneOpen(false);
               toast.success(`Voice cloned: ${newVoice.name}`);
               // Refresh voice list
-              listVoices('elevenlabs').then(setVoices).catch(() => undefined);
+              listVoices('elevenlabs')
+                .then(setVoices)
+                .catch(() => undefined);
               setVoiceId(newVoice.voiceId);
             }}
           />
@@ -537,7 +533,13 @@ function VoiceCloneDialog({
     }
     setSubmitting(true);
     try {
-      const result = await cloneVoice('elevenlabs', name.trim(), description.trim(), file, file.name);
+      const result = await cloneVoice(
+        'elevenlabs',
+        name.trim(),
+        description.trim(),
+        file,
+        file.name,
+      );
       onCloned({ voiceId: result.voiceId, name: name.trim() });
       setName('');
       setDescription('');
@@ -561,7 +563,7 @@ function VoiceCloneDialog({
         </DialogHeader>
 
         <div className="grid gap-3">
-          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Voice name
             <Input
               value={name}
@@ -570,9 +572,9 @@ function VoiceCloneDialog({
               disabled={submitting}
               className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]"
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Description (optional)
             <Input
               value={description}
@@ -581,9 +583,9 @@ function VoiceCloneDialog({
               disabled={submitting}
               className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]"
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Audio sample
             <Input
               type="file"
@@ -597,7 +599,7 @@ function VoiceCloneDialog({
                 {file.name} · {(file.size / 1024).toFixed(0)} KB
               </p>
             )}
-          </label>
+          </div>
         </div>
 
         <DialogFooter className="gap-2">

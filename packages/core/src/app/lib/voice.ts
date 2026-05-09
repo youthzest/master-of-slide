@@ -16,10 +16,7 @@ export type Voice = {
 };
 
 export type VoiceStatus = {
-  providers: Record<
-    VoiceProviderId,
-    { available: boolean; configured: boolean }
-  >;
+  providers: Record<VoiceProviderId, { available: boolean; configured: boolean }>;
   defaultProvider: VoiceProviderId | null;
   defaultVoiceIds: Record<VoiceProviderId, string | null>;
   defaultModelIds: Record<VoiceProviderId, string>;

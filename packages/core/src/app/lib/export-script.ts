@@ -88,15 +88,14 @@ export function entriesToPlainText(entries: ScriptEntry[], title?: string): Blob
     lines.push('');
   }
   lines.push(`Total slides: ${entries.length}`);
-  lines.push(
-    `Total duration: ${formatPlainDuration(entries[entries.length - 1]?.endMs ?? 0)}`,
-  );
+  lines.push(`Total duration: ${formatPlainDuration(entries[entries.length - 1]?.endMs ?? 0)}`);
   lines.push('');
   lines.push('---');
   lines.push('');
 
   for (const entry of entries) {
-    const header = `Slide ${String(entry.index + 1).padStart(2, '0')}` +
+    const header =
+      `Slide ${String(entry.index + 1).padStart(2, '0')}` +
       ` · ${formatPlainTime(entry.startMs)} – ${formatPlainTime(entry.endMs)}` +
       ` · ${entry.hasAudio ? 'audio' : 'silent'} · ${entry.source}`;
     lines.push(header);
