@@ -14,11 +14,44 @@ import type { SlideModule } from './sdk';
 // posts everything to /api/mp4/render which spawns ffmpeg server-side.
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type Mp4Quality = 'youtube' | 'standard' | 'draft';
+
+export const MP4_QUALITY_PRESETS: Array<{
+  id: Mp4Quality;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: 'youtube',
+    label: 'YouTube / High',
+    description:
+      'crf 17 · preset slow · 256k audio · visually lossless source for YouTube re-encode. Sharp text, clean photos. Slowest render.',
+  },
+  {
+    id: 'standard',
+    label: 'Standard',
+    description:
+      'crf 20 · preset medium · 192k audio · the right default for Drive/Slack/Notion sharing. Good text quality, smaller files.',
+  },
+  {
+    id: 'draft',
+    label: 'Draft',
+    description:
+      'crf 23 · preset fast · 128k audio · quick preview only. Smallest file, fastest render. Text edges may soften.',
+  },
+];
+
 export type Mp4ExportOptions = {
   /** Frames per second (default 30). */
   fps?: number;
   /** Used for slides that have no cached audio. Default 5000ms. */
   fallbackDurationMs?: number;
+  /**
+   * Encoding preset. Defaults to 'youtube' so the file works as a
+   * upload-ready master without a second pass. See MP4_QUALITY_PRESETS for
+   * the trade-off table the UI surfaces.
+   */
+  quality?: Mp4Quality;
   /** When true, also download a .srt subtitle file and a .txt script. */
   includeScript?: boolean;
   /**
@@ -104,6 +137,7 @@ export async function createMp4Blob(
       slides: slidesPayload,
       fps: opts.fps ?? 30,
       resolution: { width: 1920, height: 1080 },
+      quality: opts.quality ?? 'youtube',
     }),
   });
   opts.onProgress?.('encoding', 50);

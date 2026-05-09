@@ -45,6 +45,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -69,7 +73,7 @@ import {
 } from '../lib/canva';
 import { exportSlideAsHtml } from '../lib/export-html';
 import { exportSlideAsPdf } from '../lib/export-pdf';
-import { exportSlideAsMp4 } from '../lib/export-mp4';
+import { MP4_QUALITY_PRESETS, type Mp4Quality, exportSlideAsMp4 } from '../lib/export-mp4';
 import { exportSlideAsPptx } from '../lib/export-pptx';
 import {
   buildScriptEntries,
@@ -505,37 +509,64 @@ export function Slide() {
                       Export as PPTX
                     </DropdownMenuItem>
                     {import.meta.env.DEV && (
-                      <DropdownMenuItem
-                        disabled={exporting}
-                        onSelect={async () => {
-                          if (!slide || exporting) return;
-                          setExporting(true);
-                          const id = toast.loading(
-                            'Rendering MP4… this can take a few minutes for long decks.',
-                          );
-                          try {
-                            await exportSlideAsMp4(slide, slideId, {
-                              fps: 30,
-                              fallbackDurationMs: 5000,
-                              onProgress: (phase, percent) => {
-                                toast.loading(`MP4: ${phase} (${Math.round(percent)}%)`, { id });
-                              },
-                            });
-                            toast.success('MP4 saved.', { id });
-                          } catch (err) {
-                            console.error('[open-slide] mp4 export failed', err);
-                            toast.error(
-                              err instanceof Error ? err.message : 'MP4 export failed',
-                              { id },
-                            );
-                          } finally {
-                            setExporting(false);
-                          }
-                        }}
-                      >
-                        <Film />
-                        Export as MP4 + script (.srt + .txt)
-                      </DropdownMenuItem>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger disabled={exporting}>
+                          <Film />
+                          Export as MP4 + script (.srt + .txt)
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent className="w-80">
+                            {MP4_QUALITY_PRESETS.map((preset) => (
+                              <DropdownMenuItem
+                                key={preset.id}
+                                disabled={exporting}
+                                className="flex-col items-start gap-1 py-2"
+                                onSelect={async () => {
+                                  if (!slide || exporting) return;
+                                  setExporting(true);
+                                  const id = toast.loading(
+                                    `Rendering MP4 (${preset.label})… ${
+                                      preset.id === 'youtube'
+                                        ? 'High quality takes longer; expect a few minutes.'
+                                        : 'this can take a few minutes for long decks.'
+                                    }`,
+                                  );
+                                  try {
+                                    await exportSlideAsMp4(slide, slideId, {
+                                      fps: 30,
+                                      fallbackDurationMs: 5000,
+                                      quality: preset.id as Mp4Quality,
+                                      onProgress: (phase, percent) => {
+                                        toast.loading(
+                                          `MP4 (${preset.label}): ${phase} (${Math.round(percent)}%)`,
+                                          { id },
+                                        );
+                                      },
+                                    });
+                                    toast.success(
+                                      `MP4 saved (${preset.label}).`,
+                                      { id, duration: 4000 },
+                                    );
+                                  } catch (err) {
+                                    console.error('[open-slide] mp4 export failed', err);
+                                    toast.error(
+                                      err instanceof Error ? err.message : 'MP4 export failed',
+                                      { id },
+                                    );
+                                  } finally {
+                                    setExporting(false);
+                                  }
+                                }}
+                              >
+                                <span className="font-bold">{preset.label}</span>
+                                <span className="text-[10px] font-medium leading-snug text-muted-foreground">
+                                  {preset.description}
+                                </span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
                     )}
                     {import.meta.env.DEV && (
                       <DropdownMenuItem
