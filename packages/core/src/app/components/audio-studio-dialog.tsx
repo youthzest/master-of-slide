@@ -135,7 +135,9 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
     };
   }, [open]);
 
-  // Refresh voices when provider changes.
+  // Refresh voices when provider changes. Gemini's list is hard-coded so it
+  // always loads; ElevenLabs/MMX hit their respective APIs and need a saved
+  // key in .env (set via Voice Settings) to succeed.
   useEffect(() => {
     if (!open || !provider) return;
     let cancelled = false;
@@ -146,7 +148,15 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
         if (cancelled) return;
         setVoices(vs);
         setProviderConfigured(true);
-        if (!voiceId && vs[0]) setVoiceId(vs[0].voiceId);
+        // Don't override a custom voiceId that's still valid for this
+        // provider, but do replace cross-provider leftovers so a switch
+        // from elevenlabs → gemini stops carrying an ElevenLabs ID.
+        setVoiceId((current) => {
+          if (current && vs.some((v) => v.voiceId === current)) return current;
+          if (current && provider === 'elevenlabs') return current; // allow custom EL ID
+          if (vs[0]) return vs[0].voiceId;
+          return '';
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -320,7 +330,20 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
         <div className="grid grid-cols-3 gap-3">
           <label className="grid gap-1.5 text-[12px] font-black uppercase">
             Provider
-            <Select value={provider} onValueChange={(v) => setProvider(v as VoiceProviderId)}>
+            <Select
+              value={provider}
+              onValueChange={(v) => {
+                const next = v as VoiceProviderId;
+                setProvider(next);
+                // Pull the saved voice for the new provider so the input
+                // reflects whatever Voice Settings set up, not the previous
+                // provider's leftover ID.
+                getVoiceConfig()
+                  .then((c) => setVoiceId(c.defaultVoiceIds[next] ?? ''))
+                  .catch(() => setVoiceId(''));
+                setVoices([]);
+              }}
+            >
               <SelectTrigger className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]">
                 <SelectValue />
               </SelectTrigger>
@@ -332,31 +355,57 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
             </Select>
           </label>
 
-          <label className="grid gap-1.5 text-[12px] font-black uppercase col-span-2">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase col-span-2">
             Voice
-            <Select value={voiceId} onValueChange={setVoiceId} disabled={voicesLoading || !providerConfigured}>
-              <SelectTrigger className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]">
-                <SelectValue
-                  placeholder={
-                    !providerConfigured
-                      ? 'Configure provider in Voice Settings'
-                      : voicesLoading
+            <div className="flex gap-2">
+              <Select
+                value={voices.some((v) => v.voiceId === voiceId) ? voiceId : ''}
+                onValueChange={setVoiceId}
+                disabled={voicesLoading || voices.length === 0}
+              >
+                <SelectTrigger className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]">
+                  <SelectValue
+                    placeholder={
+                      voicesLoading
                         ? 'Loading voices…'
-                        : 'Pick a voice'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="max-h-80">
-                {voices.map((v) => (
-                  <SelectItem key={v.voiceId} value={v.voiceId}>
-                    {v.category === 'cloned' ? '🎤 ' : ''}
-                    {v.name}
-                    {v.description ? ` · ${v.description.slice(0, 40)}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
+                        : voices.length === 0
+                          ? provider === 'gemini'
+                            ? 'No Gemini voices found'
+                            : 'Configure provider in Voice Settings'
+                          : 'Pick a voice'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="max-h-80">
+                  {voices.map((v) => (
+                    <SelectItem key={v.voiceId} value={v.voiceId}>
+                      {v.category === 'cloned' ? '🎤 ' : ''}
+                      {v.name}
+                      {v.description ? ` · ${v.description.slice(0, 40)}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <input
+              type="text"
+              value={voiceId}
+              onChange={(e) => setVoiceId(e.target.value)}
+              placeholder={
+                provider === 'elevenlabs'
+                  ? '21m00Tcm4TlvDq8ikWAM (paste any ID)'
+                  : provider === 'gemini'
+                    ? 'Kore, Sulafat, …'
+                    : 'Korean_AthleticGirl, …'
+              }
+              className="w-full rounded-[2px] border-2 border-foreground bg-background px-2.5 py-1.5 font-mono text-[12px] shadow-[3px_3px_0_var(--foreground)] focus:outline-none"
+            />
+            <p className="text-[10px] font-medium text-muted-foreground normal-case tracking-normal">
+              Pick from list above OR paste a voice ID directly. Reflects the default saved in
+              Voice Settings on open; edits here don't persist — change permanently in Voice
+              Settings.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-3 text-[12px] font-bold">

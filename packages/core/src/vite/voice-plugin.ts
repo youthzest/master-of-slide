@@ -467,6 +467,73 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
             return;
           }
 
+          if (url.pathname === '/api/voice/test' && req.method === 'POST') {
+            // One-shot key validation. Strategy per provider:
+            //   - ElevenLabs / MiniMax: list voices (cheap, never fails when
+            //     the key is valid; avoids quirks where Rachel/shared voice
+            //     IDs are gated on certain accounts).
+            //   - Gemini: small synthesis call (no /me endpoint and listing
+            //     is hard-coded so it doesn't actually exercise the API key).
+            const body = (await readJson(req)) as {
+              provider?: ProviderId;
+              apiKey?: string;
+              voiceId?: string;
+            };
+            const providerId = (body.provider ?? 'elevenlabs') as ProviderId;
+            const provider = requireProvider(providerId);
+
+            const envKeyName = provider.envKey;
+            const transient: NodeJS.ProcessEnv = { ...env };
+            if (body.apiKey?.trim()) {
+              transient[envKeyName] = body.apiKey.trim();
+              if (envKeyName === 'MINIMAX_API_KEY') transient.MMX_API_KEY = body.apiKey.trim();
+            }
+            if (!provider.isConfigured(transient)) {
+              return json(res, 400, {
+                ok: false,
+                error: `${envKeyName} is empty — paste a key into the API Key field first.`,
+              });
+            }
+
+            const startedAt = Date.now();
+            try {
+              if (providerId === 'gemini') {
+                const voiceId =
+                  body.voiceId?.trim() ||
+                  transient.VOICE_DEFAULT_VOICE_ID_GEMINI ||
+                  defaultTestVoiceId(providerId);
+                const { audio } = await provider.synthesize(transient, 'test', voiceId, {
+                  format: 'mp3',
+                });
+                return json(res, 200, {
+                  ok: true,
+                  provider: providerId,
+                  voiceId,
+                  bytes: audio.length,
+                  durationMs: Date.now() - startedAt,
+                  message: `Gemini key works (${audio.length} audio bytes).`,
+                });
+              }
+              // ElevenLabs + MiniMax: listVoices is the cheapest authenticated
+              // call. If the key is invalid the upstream API returns 401 and
+              // our adapter throws with the body — which we surface verbatim.
+              const voices = await provider.listVoices(transient);
+              return json(res, 200, {
+                ok: true,
+                provider: providerId,
+                bytes: voices.length,
+                durationMs: Date.now() - startedAt,
+                message: `${providerId} key works · ${voices.length} voices visible.`,
+              });
+            } catch (err) {
+              return json(res, 200, {
+                ok: false,
+                provider: providerId,
+                error: err instanceof Error ? err.message : 'Validation failed.',
+              });
+            }
+          }
+
           if (url.pathname === '/api/voice/clone' && req.method === 'POST') {
             const providerId = (url.searchParams.get('provider') ?? 'elevenlabs') as ProviderId;
             const provider = requireProvider(providerId);
@@ -504,6 +571,16 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
 // ─────────────────────────────────────────────────────────────────────────────
 // helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Sensible "always works" voice id per provider for the Test button. Picked
+// to match each platform's documented default voice so a stock key can pass
+// validation without the user picking a voice up front.
+function defaultTestVoiceId(id: ProviderId): string {
+  if (id === 'elevenlabs') return '21m00Tcm4TlvDq8ikWAM'; // Rachel — universal default
+  if (id === 'gemini') return 'Kore';
+  if (id === 'mmx') return 'Korean_PassionateLady';
+  return '';
+}
 
 function requireProvider(id: ProviderId): VoiceProvider {
   const p = PROVIDERS[id];
