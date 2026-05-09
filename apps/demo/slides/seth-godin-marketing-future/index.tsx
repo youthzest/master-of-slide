@@ -2,14 +2,22 @@ import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
 import type { CSSProperties, ReactNode } from 'react';
 import brandPromise from './assets/brand-promise.png';
 import marketingHero from './assets/marketing-future-hero.png';
+import nvidiaIconLight from './assets/nvidia-icon-light.svg';
 
 export const design: DesignSystem = {
-  palette: { bg: '#0b0d10', text: '#f4ecdc', accent: '#d6a64b' },
-  fonts: {
-    display: '"Georgia", "Source Serif Pro", "Times New Roman", serif',
-    body: 'system-ui, -apple-system, "Helvetica Neue", "Pretendard", "Noto Sans KR", sans-serif',
+  palette: {
+    bg: '#393a3c',
+    text: '#a27d34',
+    accent: '#d42177',
   },
-  typeScale: { hero: 156, body: 34 },
+  fonts: {
+    display: '"SF Mono", "JetBrains Mono", Menlo, monospace',
+    body: '"Inter", system-ui, sans-serif',
+  },
+  typeScale: {
+    hero: 156,
+    body: 34,
+  },
   radius: 4,
 };
 
@@ -196,8 +204,8 @@ const Cover: Page = () => (
       <h1
         style={{
           fontFamily: displayFont,
-          fontSize: 144,
-          fontWeight: 800,
+          fontSize: '121px',
+          fontWeight: '800',
           lineHeight: 1.02,
           letterSpacing: '-0.02em',
           margin: 0,
@@ -205,6 +213,7 @@ const Cover: Page = () => (
           maxWidth: 1040,
         }}
       >
+        {/* @slide-comment id="c-2ecf2614" ts="2026-05-04T05:41:34.510Z" text="eyJub3RlIjoi7KCc66qp7J2EIOuniOy8gO2MheydmCDrr7jrnpjroZwg7ZW07KSYIn0" */}
         마케팅의 미래는
         <br />더 크게가 아니라
         <br />더 깊게다
@@ -500,7 +509,27 @@ export const meta: SlideMeta = {
 };
 
 export default [
-  Cover,
+  () => (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <Cover />
+      <img
+        src={nvidiaIconLight}
+        alt="Logo"
+        data-master-of-slide-logo
+        style={{
+          position: 'absolute',
+          right: 72,
+          top: 56,
+          width: 180,
+          height: 'auto',
+          maxHeight: 120,
+          objectFit: 'contain',
+          zIndex: 50,
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
+  ),
   Definition,
   Permission,
   BrandPromise,

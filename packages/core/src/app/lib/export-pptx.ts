@@ -386,7 +386,14 @@ function collectInlineRuns(block: HTMLElement, runs: PptxTextRun[], host: HTMLEl
     const childEl = child as HTMLElement;
     if (childEl instanceof HTMLImageElement) continue;
     if (childEl instanceof HTMLBRElement) {
-      runs.push({ text: '\n', fontSize: 12, fontFace: '', color: '000000', bold: false, italic: false });
+      runs.push({
+        text: '\n',
+        fontSize: 12,
+        fontFace: '',
+        color: '000000',
+        bold: false,
+        italic: false,
+      });
       continue;
     }
     if (isBlockLevel(childEl)) continue; // boundary
@@ -457,25 +464,27 @@ function hideAllTextColors(host: HTMLElement): () => void {
   // `visibility:hidden` because it would collapse spans inside flex/grid
   // containers and shift the layout we just measured.
   const walker = document.createTreeWalker(host, NodeFilter.SHOW_ELEMENT);
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
+  let node: Node | null = walker.nextNode();
+  while (node) {
     const el = node as HTMLElement;
-    if (!hasDirectTextChild(el)) continue;
-    const origColor = el.style.color;
-    const origShadow = el.style.textShadow;
-    const origStroke = el.style.webkitTextStroke;
-    const origFill = el.style.getPropertyValue('-webkit-text-fill-color');
-    el.style.color = 'transparent';
-    el.style.textShadow = 'none';
-    el.style.webkitTextStroke = '0 transparent';
-    el.style.setProperty('-webkit-text-fill-color', 'transparent');
-    restorations.push(() => {
-      el.style.color = origColor;
-      el.style.textShadow = origShadow;
-      el.style.webkitTextStroke = origStroke;
-      if (origFill) el.style.setProperty('-webkit-text-fill-color', origFill);
-      else el.style.removeProperty('-webkit-text-fill-color');
-    });
+    if (hasDirectTextChild(el)) {
+      const origColor = el.style.color;
+      const origShadow = el.style.textShadow;
+      const origStroke = el.style.webkitTextStroke;
+      const origFill = el.style.getPropertyValue('-webkit-text-fill-color');
+      el.style.color = 'transparent';
+      el.style.textShadow = 'none';
+      el.style.webkitTextStroke = '0 transparent';
+      el.style.setProperty('-webkit-text-fill-color', 'transparent');
+      restorations.push(() => {
+        el.style.color = origColor;
+        el.style.textShadow = origShadow;
+        el.style.webkitTextStroke = origStroke;
+        if (origFill) el.style.setProperty('-webkit-text-fill-color', origFill);
+        else el.style.removeProperty('-webkit-text-fill-color');
+      });
+    }
+    node = walker.nextNode();
   }
   return () => {
     for (const r of restorations) r();
@@ -684,7 +693,11 @@ function rgbToHex(color: string, fallback: string): string {
   if (!rgb) return fallback.toUpperCase();
   const [, r, g, b] = rgb;
   return [r, g, b]
-    .map((v) => Math.max(0, Math.min(255, parseInt(v, 10))).toString(16).padStart(2, '0'))
+    .map((v) =>
+      Math.max(0, Math.min(255, parseInt(v, 10)))
+        .toString(16)
+        .padStart(2, '0'),
+    )
     .join('')
     .toUpperCase();
 }

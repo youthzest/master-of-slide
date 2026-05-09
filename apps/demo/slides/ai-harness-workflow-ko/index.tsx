@@ -2,9 +2,8 @@ import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
 import type { CSSProperties, ReactNode } from 'react';
 import localAiWorkflow from './assets/local-ai-workflow_001.jpg';
 import modelFuelHarnessCar from './assets/model-fuel-harness-car_001.jpg';
-import poster from './assets/poster.jpg';
 import obsidian from './assets/obsidian.svg';
-
+import poster from './assets/poster.jpg';
 
 export const design: DesignSystem = {
   palette: {
@@ -824,27 +823,27 @@ export const meta: SlideMeta = {
 };
 
 export default [
-  (() => (
-  <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-    <Cover />
-    <img
-      src={obsidian}
-      alt="Logo"
-      data-master-of-slide-logo
-      style={{
-        position: 'absolute',
-        right: 72,
-        top: 56,
-        width: 180,
-        height: 'auto',
-        maxHeight: 120,
-        objectFit: 'contain',
-        zIndex: 50,
-        pointerEvents: 'none',
-      }}
-    />
-  </div>
-)),
+  () => (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <Cover />
+      <img
+        src={obsidian}
+        alt="Logo"
+        data-master-of-slide-logo
+        style={{
+          position: 'absolute',
+          right: 72,
+          top: 56,
+          width: 180,
+          height: 'auto',
+          maxHeight: 120,
+          objectFit: 'contain',
+          zIndex: 50,
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
+  ),
   SameModelDifferentResult,
   HarnessDefinition,
   ThreeCompetitions,

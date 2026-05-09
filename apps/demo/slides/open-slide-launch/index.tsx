@@ -1,6 +1,5 @@
-import { ImagePlaceholder } from '@open-slide/core';
-import type { CSSProperties } from 'react';
 import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
+import type { CSSProperties } from 'react';
 import openSlide from './assets/open-slide.png';
 
 export const design: DesignSystem = {

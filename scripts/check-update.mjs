@@ -24,10 +24,10 @@
  */
 
 import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -1,10 +1,10 @@
 import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
+import closingImg from './assets/closing_001.jpg';
 import coverImg from './assets/cover_001.jpg';
-import fourTrapsImg from './assets/four-traps_001.jpg';
 import cycleImg from './assets/cycle_001.jpg';
 import doubleDiamondImg from './assets/double-diamond_001.jpg';
+import fourTrapsImg from './assets/four-traps_001.jpg';
 import palRouterImg from './assets/pal-router_001.jpg';
-import closingImg from './assets/closing_001.jpg';
 
 const imgFill = {
   width: '100%',
@@ -17,10 +17,8 @@ const imgFill = {
 export const design: DesignSystem = {
   palette: { bg: 'var(--osd-bg)', text: 'var(--osd-text)', accent: 'var(--osd-accent)' },
   fonts: {
-    display:
-      'var(--osd-font-body)',
-    body:
-      'var(--osd-font-body)',
+    display: 'var(--osd-font-body)',
+    body: 'var(--osd-font-body)',
   },
   typeScale: { hero: 168, body: 36 },
   radius: 10,
@@ -62,13 +60,7 @@ const display = {
   lineHeight: 1.1,
 };
 
-const Footer = ({
-  section,
-  page,
-}: {
-  section: string;
-  page: number;
-}) => (
+const Footer = ({ section, page }: { section: string; page: number }) => (
   <div
     style={{
       position: 'absolute',
@@ -631,7 +623,9 @@ const Stage1Interview: Page = () => (
         >
           <li>🎯 숨겨진 가정 12개+ 노출</li>
           <li>🧠 소크라테스식 — 절대 코드 안 씀</li>
-          <li>⚡ 명령: <code style={{ color: cool }}>ooo interview "..."</code></li>
+          <li>
+            ⚡ 명령: <code style={{ color: cool }}>ooo interview "..."</code>
+          </li>
           <li>🚦 통과 기준: Ambiguity ≤ 0.2</li>
         </ul>
       </div>
@@ -657,9 +651,7 @@ const Stage1Interview: Page = () => (
         >
           예시 — 할 일 CLI
         </div>
-        <div style={{ color: muted, marginBottom: 18 }}>
-          → 삭제 vs 아카이빙?
-        </div>
+        <div style={{ color: muted, marginBottom: 18 }}>→ 삭제 vs 아카이빙?</div>
         <div style={{ color: muted, marginBottom: 18 }}>→ 개인용 vs 팀 협업?</div>
         <div style={{ color: muted, marginBottom: 18 }}>→ 우선순위 5단계 / 3단계?</div>
         <div style={{ color: muted, marginBottom: 18 }}>→ 마감일 필수 / 선택?</div>
@@ -714,7 +706,7 @@ const Stage2Seed: Page = () => (
           overflow: 'hidden',
         }}
       >
-{`goal: Personal task CLI with priority
+        {`goal: Personal task CLI with priority
 constraints:
   - Single user
   - 3 priority levels: H/M/L
@@ -738,12 +730,8 @@ const Stage3Execute: Page = () => (
   <div style={{ ...fill, padding: '96px 100px 0 100px', display: 'flex' }}>
     <div style={{ flex: 1.05, paddingRight: 48 }}>
       <div style={{ ...eyebrow, marginBottom: 18 }}>Stage 3</div>
-      <h2 style={{ ...display, fontSize: 92 }}>
-        ⚙️ Execute
-      </h2>
-      <p style={{ fontSize: 32, color: muted, marginTop: 18 }}>
-        Double Diamond 분해로 단계별 구현
-      </p>
+      <h2 style={{ ...display, fontSize: 92 }}>⚙️ Execute</h2>
+      <p style={{ fontSize: 32, color: muted, marginTop: 18 }}>Double Diamond 분해로 단계별 구현</p>
       <ul
         style={{
           marginTop: 36,
@@ -819,9 +807,7 @@ const Stage4Evaluate: Page = () => {
       <div style={{ ...eyebrow, marginBottom: 18 }}>Stage 4</div>
       <h2 style={{ ...display, fontSize: 100 }}>
         ✅ Evaluate
-        <span style={{ color: muted, fontWeight: 400, fontSize: 44 }}>
-          {' · '}3단계 자동 검증
-        </span>
+        <span style={{ color: muted, fontWeight: 400, fontSize: 44 }}>{' · '}3단계 자동 검증</span>
       </h2>
       <div
         style={{
@@ -846,9 +832,7 @@ const Stage4Evaluate: Page = () => {
             }}
           >
             <div style={{ fontSize: 44 }}>{t.icon}</div>
-            <div style={{ fontSize: 36, fontWeight: 800, color: t.color }}>
-              {t.name}
-            </div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: t.color }}>{t.name}</div>
             <div
               style={{
                 fontSize: 28,
@@ -907,7 +891,9 @@ const Stage5Evolve: Page = () => (
           }}
         >
           <li>📈 평가 결과 → 새 의문 → 다음 세대 Seed</li>
-          <li>♾️ <b style={{ color: 'var(--osd-accent)' }}>Ralph</b>는 세션을 넘어 지속 반복</li>
+          <li>
+            ♾️ <b style={{ color: 'var(--osd-accent)' }}>Ralph</b>는 세션을 넘어 지속 반복
+          </li>
           <li>🎯 정지 신호: ontology 유사도 ≥ 95% (3세대 연속)</li>
           <li>🛑 안전장치: 30세대 도달 시 강제 종료</li>
         </ul>
@@ -924,10 +910,14 @@ const Stage5Evolve: Page = () => (
           lineHeight: 1.7,
         }}
       >
-        <div style={{ color: muted }}>Gen 1 → 78%   <span style={{ color: warn }}>continue</span></div>
-        <div style={{ color: muted }}>Gen 2 → 91%   <span style={{ color: warn }}>continue</span></div>
         <div style={{ color: muted }}>
-          Gen 3 → 97%   <span style={{ color: ok }}>✅ converged</span>
+          Gen 1 → 78% <span style={{ color: warn }}>continue</span>
+        </div>
+        <div style={{ color: muted }}>
+          Gen 2 → 91% <span style={{ color: warn }}>continue</span>
+        </div>
+        <div style={{ color: muted }}>
+          Gen 3 → 97% <span style={{ color: ok }}>✅ converged</span>
         </div>
         <div
           style={{
@@ -967,7 +957,8 @@ const Gate1Definition: Page = () => (
     <div style={{ ...eyebrow, marginBottom: 18 }}>Gate 1</div>
     <h2 style={{ ...display, fontSize: 96 }}>Ambiguity Score</h2>
     <p style={{ marginTop: 24, fontSize: 32, color: muted }}>
-      모호함을 정량화하는 수학적 게이트. <b style={{ color: 'var(--osd-accent)' }}>0.2 이하</b>에서만 Seed 생성.
+      모호함을 정량화하는 수학적 게이트. <b style={{ color: 'var(--osd-accent)' }}>0.2 이하</b>
+      에서만 Seed 생성.
     </p>
     <div
       style={{
@@ -981,8 +972,15 @@ const Gate1Definition: Page = () => (
         fontFamily: '"JetBrains Mono", monospace',
       }}
     >
-      Ambiguity = 1 − Σ ( <span style={{ color: cool }}>Clarity<sub>i</sub></span> ×{' '}
-      <span style={{ color: 'var(--osd-accent)' }}>Weight<sub>i</sub></span> )
+      Ambiguity = 1 − Σ ({' '}
+      <span style={{ color: cool }}>
+        Clarity<sub>i</sub>
+      </span>{' '}
+      ×{' '}
+      <span style={{ color: 'var(--osd-accent)' }}>
+        Weight<sub>i</sub>
+      </span>{' '}
+      )
     </div>
     <div
       style={{
@@ -1006,9 +1004,7 @@ const Gate1Definition: Page = () => (
             padding: '24px 26px',
           }}
         >
-          <div style={{ fontSize: 26, color: 'var(--osd-accent)', fontWeight: 700 }}>
-            {d.label}
-          </div>
+          <div style={{ fontSize: 26, color: 'var(--osd-accent)', fontWeight: 700 }}>{d.label}</div>
           <div style={{ fontSize: 56, fontWeight: 800, marginTop: 6 }}>{d.weight}</div>
           <div style={{ fontSize: 22, color: muted, marginTop: 6 }}>{d.q}</div>
         </div>
@@ -1034,14 +1030,14 @@ const Gate1Example: Page = () => (
         lineHeight: 1.7,
       }}
     >
-      <div>목표  0.9 × 40%  =  0.36</div>
-      <div>제약  0.8 × 30%  =  0.24</div>
-      <div>성공  0.7 × 30%  =  0.21</div>
+      <div>목표 0.9 × 40% = 0.36</div>
+      <div>제약 0.8 × 30% = 0.24</div>
+      <div>성공 0.7 × 30% = 0.21</div>
       <div style={{ borderTop: `1px solid ${border}`, marginTop: 14, paddingTop: 14 }}>
-        명확도 합계  =  <span style={{ color: cool }}>0.81</span>
+        명확도 합계 = <span style={{ color: cool }}>0.81</span>
       </div>
       <div>
-        Ambiguity  =  1 − 0.81  =  <span style={{ color: 'var(--osd-accent)' }}>0.19</span>{' '}
+        Ambiguity = 1 − 0.81 = <span style={{ color: 'var(--osd-accent)' }}>0.19</span>{' '}
         <span style={{ color: ok, marginLeft: 12 }}>✅ Pass</span>
       </div>
     </div>
@@ -1053,8 +1049,8 @@ const Gate1Example: Page = () => (
         lineHeight: 1.5,
       }}
     >
-      <b style={{ color: 'var(--osd-text)' }}>왜 0.2인가?</b>{' '}
-      80% 명확도면 남은 미지수는 코드 수준에서 결정 가능합니다.
+      <b style={{ color: 'var(--osd-text)' }}>왜 0.2인가?</b> 80% 명확도면 남은 미지수는 코드
+      수준에서 결정 가능합니다.
     </p>
     <Footer section="C · Gates" page={15} />
   </div>
@@ -1120,12 +1116,10 @@ const Gate2Convergence: Page = () => (
       >
         <div style={{ color: muted }}>Gen 1: {'{Task, Priority, Status}'}</div>
         <div style={{ color: muted }}>
-          Gen 2: {'{Task, Priority, Status, DueDate}'}{' '}
-          <span style={{ color: warn }}>78%</span>
+          Gen 2: {'{Task, Priority, Status, DueDate}'} <span style={{ color: warn }}>78%</span>
         </div>
         <div style={{ color: 'var(--osd-text)' }}>
-          Gen 3: {'{Task, Priority, Status, DueDate}'}{' '}
-          <span style={{ color: ok }}>100% ✅</span>
+          Gen 3: {'{Task, Priority, Status, DueDate}'} <span style={{ color: ok }}>100% ✅</span>
         </div>
       </div>
     </div>
@@ -1140,9 +1134,7 @@ const Gate3PAL: Page = () => (
       <h2 style={{ ...display, fontSize: 80 }}>
         PAL Router
         <br />
-        <span style={{ color: muted, fontSize: 36, fontWeight: 400 }}>
-          비용 자동 조정 라우터
-        </span>
+        <span style={{ color: muted, fontSize: 36, fontWeight: 400 }}>비용 자동 조정 라우터</span>
       </h2>
       <div
         style={{
@@ -1240,9 +1232,7 @@ const Discussion1: Page = () => (
     }}
   >
     <div style={{ ...eyebrow, marginBottom: 24 }}>Discussion · 5분</div>
-    <h2 style={{ ...display, fontSize: 80, marginBottom: 56 }}>
-      게이트, 어떻게 보세요?
-    </h2>
+    <h2 style={{ ...display, fontSize: 80, marginBottom: 56 }}>게이트, 어떻게 보세요?</h2>
     <ol
       style={{
         margin: 0,
@@ -1360,8 +1350,8 @@ const InstallCmd: Page = () => (
       <div style={{ color: muted, fontSize: 22 }}># 옵션 A — 자동 감지</div>
       <div>OUROBOROS_INSTALL_RUNTIME=claude \</div>
       <div>
-        {'  '}curl -fsSL https://raw.githubusercontent.com/Q00/ouroboros/main/scripts/install.sh{' '}
-        | bash
+        {'  '}curl -fsSL https://raw.githubusercontent.com/Q00/ouroboros/main/scripts/install.sh |
+        bash
       </div>
     </div>
     <div
@@ -1497,7 +1487,9 @@ const Lab1Mission: Page = () => (
         }}
       >
         <li>⏱ 시간 분배 — 폴더 2m / 시작 10m / 답변 15m / 검증 3m</li>
-        <li>📋 산출물 — <code>.ouroboros/seed.yaml</code></li>
+        <li>
+          📋 산출물 — <code>.ouroboros/seed.yaml</code>
+        </li>
         <li>🚦 통과 기준 — Ambiguity ≤ 0.2</li>
       </ul>
     </div>
@@ -1548,9 +1540,7 @@ const Lab1Mission: Page = () => (
           }}
         >
           <div style={{ color: 'var(--osd-accent)' }}>$ ooo interview</div>
-          <div style={{ color: muted, marginLeft: 0 }}>
-            ▸ 삭제 vs 아카이브?
-          </div>
+          <div style={{ color: muted, marginLeft: 0 }}>▸ 삭제 vs 아카이브?</div>
           <div style={{ color: cool, marginLeft: 24 }}>아카이브로 보존</div>
           <div style={{ color: muted }}>▸ 우선순위 단계 수?</div>
           <div style={{ color: cool, marginLeft: 24 }}>3단계 (H/M/L)</div>
@@ -1564,7 +1554,7 @@ const Lab1Mission: Page = () => (
               paddingTop: 18,
             }}
           >
-            ✅ Ambiguity 0.19  →  seed.yaml 생성
+            ✅ Ambiguity 0.19 → seed.yaml 생성
           </div>
         </div>
       </div>
@@ -1755,7 +1745,7 @@ const Lab1SeedExample: Page = () => (
         margin: 0,
       }}
     >
-{`goal: |
+      {`goal: |
   Personal task CLI with 3-level priority and SQLite storage
 
 constraints:
@@ -1825,21 +1815,13 @@ const Lab2Run: Page = () => (
       }}
     >
       <div style={{ color: 'var(--osd-accent)' }}>[Wonder]</div>
-      <div style={{ color: muted, paddingLeft: 24 }}>
-        SQLite vs in-memory · click vs typer
-      </div>
+      <div style={{ color: muted, paddingLeft: 24 }}>SQLite vs in-memory · click vs typer</div>
       <div style={{ color: 'var(--osd-accent)' }}>[Define]</div>
-      <div style={{ color: muted, paddingLeft: 24 }}>
-        ontology 확정 — Task / Priority / Status
-      </div>
+      <div style={{ color: muted, paddingLeft: 24 }}>ontology 확정 — Task / Priority / Status</div>
       <div style={{ color: cool }}>[Design]</div>
-      <div style={{ color: muted, paddingLeft: 24 }}>
-        src/{'{models, commands, db}'}/ + tests/
-      </div>
+      <div style={{ color: muted, paddingLeft: 24 }}>src/{'{models, commands, db}'}/ + tests/</div>
       <div style={{ color: ok }}>[Deliver]</div>
-      <div style={{ color: muted, paddingLeft: 24 }}>
-        ✓ 7개 모듈, 14개 테스트 — pytest 통과
-      </div>
+      <div style={{ color: muted, paddingLeft: 24 }}>✓ 7개 모듈, 14개 테스트 — pytest 통과</div>
     </div>
     <Footer section="F · Lab 2" page={30} />
   </div>
@@ -1907,9 +1889,7 @@ const Lab2Discussion: Page = () => (
     }}
   >
     <div style={{ ...eyebrow, marginBottom: 24 }}>Discussion · 3분</div>
-    <h2 style={{ ...display, fontSize: 78, marginBottom: 56 }}>
-      검증이 떨어지면?
-    </h2>
+    <h2 style={{ ...display, fontSize: 78, marginBottom: 56 }}>검증이 떨어지면?</h2>
     <p style={{ fontSize: 40, lineHeight: 1.5, color: 'var(--osd-text)', maxWidth: 1500 }}>
       "응답시간 &lt; 200ms" 제약을 만족하는 검증 코드가 없다는 평가가 나오면,
       <br />
@@ -2051,10 +2031,14 @@ const Lab3Ralph: Page = () => (
         lineHeight: 1.8,
       }}
     >
-      <div>Gen 1 → 78% similarity   <span style={{ color: warn }}>(continue)</span></div>
-      <div>Gen 2 → 91% similarity   <span style={{ color: warn }}>(continue)</span></div>
       <div>
-        Gen 3 → 97% similarity   <span style={{ color: ok }}>✅ converged</span>
+        Gen 1 → 78% similarity <span style={{ color: warn }}>(continue)</span>
+      </div>
+      <div>
+        Gen 2 → 91% similarity <span style={{ color: warn }}>(continue)</span>
+      </div>
+      <div>
+        Gen 3 → 97% similarity <span style={{ color: ok }}>✅ converged</span>
       </div>
     </div>
     <Footer section="G · Lab 3" page={35} />
@@ -2072,9 +2056,7 @@ const Lab3Deeper: Page = () => (
     }}
   >
     <div style={{ ...eyebrow, marginBottom: 24 }}>Reflection · 5분</div>
-    <h2 style={{ ...display, fontSize: 80, marginBottom: 56 }}>
-      깊이 있는 질문
-    </h2>
+    <h2 style={{ ...display, fontSize: 80, marginBottom: 56 }}>깊이 있는 질문</h2>
     <ol
       style={{
         margin: 0,
@@ -2221,27 +2203,19 @@ const NextSteps: Page = () => (
       }}
     >
       <li>
-        <span style={{ color: 'var(--osd-accent)', fontWeight: 800, marginRight: 20 }}>
-          01.
-        </span>
+        <span style={{ color: 'var(--osd-accent)', fontWeight: 800, marginRight: 20 }}>01.</span>
         자기 프로젝트에서 작은 모듈 하나 골라 1사이클 실행
       </li>
       <li>
-        <span style={{ color: 'var(--osd-accent)', fontWeight: 800, marginRight: 20 }}>
-          02.
-        </span>
+        <span style={{ color: 'var(--osd-accent)', fontWeight: 800, marginRight: 20 }}>02.</span>
         일주일 후 같은 요구사항으로 vibe coding과 결과 비교
       </li>
       <li>
-        <span style={{ color: 'var(--osd-accent)', fontWeight: 800, marginRight: 20 }}>
-          03.
-        </span>
+        <span style={{ color: 'var(--osd-accent)', fontWeight: 800, marginRight: 20 }}>03.</span>
         Ouroboros 사용 일지 노트 시작 — 학습 누적
       </li>
       <li>
-        <span style={{ color: 'var(--osd-accent)', fontWeight: 800, marginRight: 20 }}>
-          04.
-        </span>
+        <span style={{ color: 'var(--osd-accent)', fontWeight: 800, marginRight: 20 }}>04.</span>
         github.com/Q00/ouroboros — 직접 코드 읽어보기
       </li>
     </ul>

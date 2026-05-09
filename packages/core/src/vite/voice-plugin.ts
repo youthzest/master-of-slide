@@ -90,11 +90,7 @@ const elevenlabsProvider: VoiceProvider = {
       preview: v.preview_url,
       description: v.description,
       category:
-        v.category === 'cloned'
-          ? 'cloned'
-          : v.category === 'premade'
-            ? 'preset'
-            : 'community',
+        v.category === 'cloned' ? 'cloned' : v.category === 'premade' ? 'preset' : 'community',
       labels: v.labels,
     }));
   },
@@ -545,9 +541,7 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
                   transient.VOICE_DEFAULT_VOICE_ID_GEMINI ||
                   defaultTestVoiceId(providerId);
                 const modelId =
-                  pickString(body.modelId) ||
-                  transient.VOICE_MODEL_GEMINI ||
-                  DEFAULT_MODELS.gemini;
+                  pickString(body.modelId) || transient.VOICE_MODEL_GEMINI || DEFAULT_MODELS.gemini;
                 const { audio } = await provider.synthesize(transient, 'test', voiceId, {
                   modelId,
                   format: 'mp3',
@@ -577,10 +571,9 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
                 ...resultMeta,
                 durationMs: Date.now() - startedAt,
                 saved,
-                message:
-                  `${providerId} key works · ${resultMeta.bytes} ${
-                    providerId === 'gemini' ? 'audio bytes' : 'voices'
-                  }` + (saved ? ' · saved to .env' : ''),
+                message: `${providerId} key works · ${resultMeta.bytes} ${
+                  providerId === 'gemini' ? 'audio bytes' : 'voices'
+                }${saved ? ' · saved to .env' : ''}`,
               });
             } catch (err) {
               return json(res, 200, {
@@ -698,11 +691,7 @@ function humanizeProviderError(providerId: ProviderId, err: unknown): string {
         base_resp?: { status_msg?: string };
       };
       detailMessage =
-        obj.detail?.message ??
-        obj.error?.message ??
-        obj.message ??
-        obj.base_resp?.status_msg ??
-        '';
+        obj.detail?.message ?? obj.error?.message ?? obj.message ?? obj.base_resp?.status_msg ?? '';
     } catch {
       // ignore parse errors
     }
@@ -727,14 +716,17 @@ function requireKey(env: NodeJS.ProcessEnv, ...names: string[]): string {
     const value = env[name];
     if (value) return value;
   }
-  throw new Error(
-    `${names.join(' or ')} is not configured. Add it via the Voice Settings panel.`,
-  );
+  throw new Error(`${names.join(' or ')} is not configured. Add it via the Voice Settings panel.`);
 }
 
 // PCM → WAV header wrap. Gemini returns raw 16-bit signed PCM; browsers can't
 // play that without a RIFF/WAV container.
-function pcmToWav(pcm: Buffer, sampleRate: number, channels: number, bitsPerSample: number): Buffer {
+function pcmToWav(
+  pcm: Buffer,
+  sampleRate: number,
+  channels: number,
+  bitsPerSample: number,
+): Buffer {
   const byteRate = (sampleRate * channels * bitsPerSample) / 8;
   const blockAlign = (channels * bitsPerSample) / 8;
   const header = Buffer.alloc(44);

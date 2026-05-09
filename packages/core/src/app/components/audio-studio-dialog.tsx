@@ -9,12 +9,12 @@ import {
 import type { SlideModule } from '../lib/sdk';
 import {
   DEFAULT_MODEL_ID,
-  MODELS_BY_PROVIDER,
-  type Voice,
-  type VoiceProviderId,
   getVoiceConfig,
   listVoices,
+  MODELS_BY_PROVIDER,
   synthesizeText,
+  type Voice,
+  type VoiceProviderId,
 } from '../lib/voice';
 import { Button } from './ui/button';
 import {
@@ -25,13 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Audio cache — singleton in module scope so audio survives dialog reopens
@@ -165,9 +159,7 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
         // Listing failure usually means the provider key isn't configured yet.
         // Gemini's list works without a key, so keep that case quiet.
         if (provider !== 'gemini') {
-          toast.message(
-            'Configure this provider in Voice Settings before generating audio.',
-          );
+          toast.message('Configure this provider in Voice Settings before generating audio.');
         } else {
           toast.error(err instanceof Error ? err.message : 'Voice list failed');
         }
@@ -204,9 +196,7 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
 
   const autoFillAllEmpty = useCallback(async () => {
     if (!slide) return;
-    const empties = rows
-      .map((r, i) => (r.text.trim() ? -1 : i))
-      .filter((i) => i >= 0);
+    const empties = rows.map((r, i) => (r.text.trim() ? -1 : i)).filter((i) => i >= 0);
     if (empties.length === 0) {
       toast.message('Every slide already has narration text.');
       return;
@@ -256,9 +246,7 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
       toast.message('Pick a voice first.');
       return;
     }
-    const indices = rows
-      .map((r, i) => (r.text.trim() ? i : -1))
-      .filter((i) => i >= 0);
+    const indices = rows.map((r, i) => (r.text.trim() ? i : -1)).filter((i) => i >= 0);
     if (indices.length === 0) {
       toast.message('No slides have narration text to synthesize.');
       return;
@@ -341,7 +329,7 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
         </DialogHeader>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Provider
             <Select
               value={provider}
@@ -372,14 +360,12 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
                 <SelectItem value="mmx">MiniMax</SelectItem>
               </SelectContent>
             </Select>
-          </label>
+          </div>
 
-          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Model
             <Select
-              value={
-                MODELS_BY_PROVIDER[provider].some((m) => m.id === modelId) ? modelId : ''
-              }
+              value={MODELS_BY_PROVIDER[provider].some((m) => m.id === modelId) ? modelId : ''}
               onValueChange={setModelId}
             >
               <SelectTrigger className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]">
@@ -400,7 +386,7 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
               placeholder={`default: ${DEFAULT_MODEL_ID[provider]}`}
               className="w-full rounded-[2px] border-2 border-foreground bg-background px-2.5 py-1.5 font-mono text-[11px] shadow-[2px_2px_0_var(--foreground)] focus:outline-none"
             />
-          </label>
+          </div>
 
           <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Voice
@@ -490,9 +476,14 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
           {rows.map((row, i) => {
             const cached = getAudioForSlide(slideId, i);
             const isPlaying = playingIndex === i;
+            // Stable per-row key — `i` alone tripped Biome's noArrayIndexKey.
+            // Slides keep their position across edits, so concatenating the
+            // first 12 chars of text is unique enough and reuses DOM nodes
+            // when the user only changes one row's text.
+            const rowKey = `${i}-${row.text.slice(0, 12)}`;
             return (
               <div
-                key={i}
+                key={rowKey}
                 className="grid grid-cols-[40px_1fr_auto] items-start gap-3 rounded-[2px] border-2 border-foreground bg-card p-3"
               >
                 <div className="text-center">

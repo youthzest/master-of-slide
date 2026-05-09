@@ -241,6 +241,7 @@ const Cover: Page = () => (
           lineHeight: 0.98,
           letterSpacing: '-0.045em',
           fontWeight: 950,
+          textAlign: 'justify',
         }}
       >
         GPT Image 2

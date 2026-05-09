@@ -33,10 +33,7 @@ export function resolveNarration(slide: SlideModule, index: number): ResolvedNar
 // Render a single Page offscreen and pull its visible text. Skips elements
 // that are aria-hidden or inside <ImagePlaceholder>. Cheap whitespace
 // normalization on top.
-export async function extractVisibleText(
-  slide: SlideModule,
-  index: number,
-): Promise<string> {
+export async function extractVisibleText(slide: SlideModule, index: number): Promise<string> {
   const Page = slide.default?.[index];
   if (!Page) return '';
 
@@ -91,8 +88,5 @@ export async function resolveNarrationWithExtraction(
 }
 
 function cleanText(raw: string): string {
-  return raw
-    .replace(/\s+/g, ' ')
-    .replace(/​|‌|‍|﻿/g, '')
-    .trim();
+  return raw.replace(/\s+/g, ' ').replace(/​|‌|‍|﻿/g, '').trim();
 }
