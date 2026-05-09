@@ -29,6 +29,15 @@ type SynthesizeOptions = {
   format?: 'mp3' | 'wav' | 'pcm';
 };
 
+// Default models per provider — used when neither the request nor the saved
+// config specifies one. Kept here (not in VoiceProvider methods) so the UI can
+// surface the same defaults.
+const DEFAULT_MODELS: Record<ProviderId, string> = {
+  elevenlabs: 'eleven_multilingual_v2',
+  gemini: 'gemini-2.5-flash-preview-tts',
+  mmx: 'speech-2.8-hd',
+};
+
 interface VoiceProvider {
   id: ProviderId;
   envKey: string;
@@ -90,7 +99,7 @@ const elevenlabsProvider: VoiceProvider = {
     }));
   },
   async synthesize(env, text, voiceId, opts = {}) {
-    const modelId = opts.modelId ?? 'eleven_multilingual_v2';
+    const modelId = opts.modelId ?? env.VOICE_MODEL_ELEVENLABS ?? DEFAULT_MODELS.elevenlabs;
     const format = opts.format ?? 'mp3';
     const formatHeader =
       format === 'mp3' ? 'mp3_44100_128' : format === 'wav' ? 'pcm_44100' : 'pcm_44100';
@@ -142,7 +151,6 @@ const elevenlabsProvider: VoiceProvider = {
 // Gemini TTS provider — Google AI Studio
 // ─────────────────────────────────────────────────────────────────────────────
 
-const GEMINI_MODEL = 'gemini-2.5-flash-preview-tts';
 const GEMINI_PCM_SAMPLE_RATE = 24000;
 
 // Curated list of Gemini 2.5 prebuilt voices with personality hints.
@@ -189,9 +197,10 @@ const geminiProvider: VoiceProvider = {
   async listVoices() {
     return GEMINI_VOICES;
   },
-  async synthesize(env, text, voiceId) {
+  async synthesize(env, text, voiceId, opts = {}) {
+    const modelId = opts.modelId ?? env.VOICE_MODEL_GEMINI ?? DEFAULT_MODELS.gemini;
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent`,
       {
         method: 'POST',
         headers: {
@@ -208,7 +217,7 @@ const geminiProvider: VoiceProvider = {
               },
             },
           },
-          model: GEMINI_MODEL,
+          model: modelId,
         }),
       },
     );
@@ -235,7 +244,6 @@ const geminiProvider: VoiceProvider = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MINIMAX_HOST = 'https://api.minimax.io';
-const MINIMAX_DEFAULT_MODEL = 'speech-2.8-hd';
 
 const minimaxProvider: VoiceProvider = {
   id: 'mmx',
@@ -299,7 +307,7 @@ const minimaxProvider: VoiceProvider = {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: opts.modelId ?? MINIMAX_DEFAULT_MODEL,
+        model: opts.modelId ?? env.VOICE_MODEL_MMX ?? DEFAULT_MODELS.mmx,
         text,
         stream: false,
         voice_setting: { voice_id: voiceId, speed: 1, vol: 1, pitch: 0 },
@@ -348,10 +356,14 @@ const ENV_KEYS: Record<string, string | undefined> = {
   ELEVENLABS_API_KEY: undefined,
   GEMINI_API_KEY: undefined,
   MMX_API_KEY: undefined,
+  MINIMAX_API_KEY: undefined,
   VOICE_DEFAULT_PROVIDER: undefined,
   VOICE_DEFAULT_VOICE_ID_ELEVENLABS: undefined,
   VOICE_DEFAULT_VOICE_ID_GEMINI: undefined,
   VOICE_DEFAULT_VOICE_ID_MMX: undefined,
+  VOICE_MODEL_ELEVENLABS: undefined,
+  VOICE_MODEL_GEMINI: undefined,
+  VOICE_MODEL_MMX: undefined,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -395,6 +407,11 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
                 gemini: env.VOICE_DEFAULT_VOICE_ID_GEMINI ?? null,
                 mmx: env.VOICE_DEFAULT_VOICE_ID_MMX ?? null,
               },
+              defaultModelIds: {
+                elevenlabs: env.VOICE_MODEL_ELEVENLABS ?? DEFAULT_MODELS.elevenlabs,
+                gemini: env.VOICE_MODEL_GEMINI ?? DEFAULT_MODELS.gemini,
+                mmx: env.VOICE_MODEL_MMX ?? DEFAULT_MODELS.mmx,
+              },
             });
           }
 
@@ -404,7 +421,7 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
                 hasKeys: {
                   elevenlabs: Boolean(env.ELEVENLABS_API_KEY),
                   gemini: Boolean(env.GEMINI_API_KEY),
-                  mmx: Boolean(env.MMX_API_KEY),
+                  mmx: Boolean(env.MMX_API_KEY ?? env.MINIMAX_API_KEY),
                 },
                 defaultProvider: env.VOICE_DEFAULT_PROVIDER ?? null,
                 defaultVoiceIds: {
@@ -412,18 +429,30 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
                   gemini: env.VOICE_DEFAULT_VOICE_ID_GEMINI ?? null,
                   mmx: env.VOICE_DEFAULT_VOICE_ID_MMX ?? null,
                 },
+                modelIds: {
+                  elevenlabs: env.VOICE_MODEL_ELEVENLABS ?? DEFAULT_MODELS.elevenlabs,
+                  gemini: env.VOICE_MODEL_GEMINI ?? DEFAULT_MODELS.gemini,
+                  mmx: env.VOICE_MODEL_MMX ?? DEFAULT_MODELS.mmx,
+                },
               });
             }
             if (req.method === 'POST') {
               const body = (await readJson(req)) as Record<string, string | undefined>;
+              // Sanitize EVERY incoming key string — pasted keys often carry
+              // BOM, zero-width chars, "Bearer ", or wrapping quotes that make
+              // a perfectly valid key look invalid to the upstream API.
               await persistVoiceEnv(envPath, env, {
-                ELEVENLABS_API_KEY: pickString(body.elevenlabsApiKey),
-                GEMINI_API_KEY: pickString(body.geminiApiKey),
-                MMX_API_KEY: pickString(body.mmxApiKey),
+                ELEVENLABS_API_KEY: pickKey(body.elevenlabsApiKey),
+                GEMINI_API_KEY: pickKey(body.geminiApiKey),
+                MMX_API_KEY: pickKey(body.mmxApiKey),
+                MINIMAX_API_KEY: pickKey(body.mmxApiKey), // mirror so listVoices works
                 VOICE_DEFAULT_PROVIDER: pickString(body.defaultProvider),
                 VOICE_DEFAULT_VOICE_ID_ELEVENLABS: pickString(body.elevenlabsVoiceId),
                 VOICE_DEFAULT_VOICE_ID_GEMINI: pickString(body.geminiVoiceId),
                 VOICE_DEFAULT_VOICE_ID_MMX: pickString(body.mmxVoiceId),
+                VOICE_MODEL_ELEVENLABS: pickString(body.elevenlabsModelId),
+                VOICE_MODEL_GEMINI: pickString(body.geminiModelId),
+                VOICE_MODEL_MMX: pickString(body.mmxModelId),
               });
               return json(res, 200, { ok: true });
             }
@@ -450,14 +479,21 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
             const providerId = (body.provider ?? 'elevenlabs') as ProviderId;
             const provider = requireProvider(providerId);
             const voiceId =
-              body.voiceId ??
+              pickString(body.voiceId) ??
               env[`VOICE_DEFAULT_VOICE_ID_${providerId.toUpperCase()}`] ??
               '';
             if (!voiceId) {
               return json(res, 400, { error: 'No voice selected.' });
             }
+            // Resolve modelId: explicit request > stored config > provider default.
+            // The provider methods do this same fallback, but doing it here too
+            // makes the chosen model visible in error messages.
+            const modelId =
+              pickString(body.modelId) ??
+              env[`VOICE_MODEL_${providerId.toUpperCase()}`] ??
+              DEFAULT_MODELS[providerId];
             const { audio, contentType } = await provider.synthesize(env, body.text, voiceId, {
-              modelId: body.modelId,
+              modelId,
               format: body.format ?? 'mp3',
             });
             res.statusCode = 200;
@@ -468,25 +504,30 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
           }
 
           if (url.pathname === '/api/voice/test' && req.method === 'POST') {
-            // One-shot key validation. Strategy per provider:
-            //   - ElevenLabs / MiniMax: list voices (cheap, never fails when
-            //     the key is valid; avoids quirks where Rachel/shared voice
-            //     IDs are gated on certain accounts).
-            //   - Gemini: small synthesis call (no /me endpoint and listing
-            //     is hard-coded so it doesn't actually exercise the API key).
+            // Validate the key with the cheapest authenticated call per
+            // provider, then PERSIST the key on success so the user doesn't
+            // need a separate "Save" round-trip — most users hit Test
+            // expecting the key to take effect immediately.
             const body = (await readJson(req)) as {
               provider?: ProviderId;
               apiKey?: string;
               voiceId?: string;
+              modelId?: string;
+              persist?: boolean;
             };
             const providerId = (body.provider ?? 'elevenlabs') as ProviderId;
             const provider = requireProvider(providerId);
+            const persist = body.persist !== false; // default: persist
 
             const envKeyName = provider.envKey;
+            // Strip paste-noise (BOM, zero-width chars, "Bearer ", quotes,
+            // internal whitespace) so a correctly-typed key isn't rejected.
+            const cleanedKey = sanitizeApiKey(body.apiKey);
             const transient: NodeJS.ProcessEnv = { ...env };
-            if (body.apiKey?.trim()) {
-              transient[envKeyName] = body.apiKey.trim();
-              if (envKeyName === 'MINIMAX_API_KEY') transient.MMX_API_KEY = body.apiKey.trim();
+            if (cleanedKey) {
+              transient[envKeyName] = cleanedKey;
+              // MiniMax provider checks both names — keep them in sync.
+              if (envKeyName === 'MINIMAX_API_KEY') transient.MMX_API_KEY = cleanedKey;
             }
             if (!provider.isConfigured(transient)) {
               return json(res, 400, {
@@ -497,39 +538,55 @@ export function voicePlugin(opts: VoicePluginOptions = {}): Plugin {
 
             const startedAt = Date.now();
             try {
+              let resultMeta: { bytes: number; voiceId?: string };
               if (providerId === 'gemini') {
                 const voiceId =
-                  body.voiceId?.trim() ||
+                  pickString(body.voiceId) ||
                   transient.VOICE_DEFAULT_VOICE_ID_GEMINI ||
                   defaultTestVoiceId(providerId);
+                const modelId =
+                  pickString(body.modelId) ||
+                  transient.VOICE_MODEL_GEMINI ||
+                  DEFAULT_MODELS.gemini;
                 const { audio } = await provider.synthesize(transient, 'test', voiceId, {
+                  modelId,
                   format: 'mp3',
                 });
-                return json(res, 200, {
-                  ok: true,
-                  provider: providerId,
-                  voiceId,
-                  bytes: audio.length,
-                  durationMs: Date.now() - startedAt,
-                  message: `Gemini key works (${audio.length} audio bytes).`,
-                });
+                resultMeta = { bytes: audio.length, voiceId };
+              } else {
+                // ElevenLabs + MiniMax: listVoices is the cheapest authenticated
+                // call. 401 means bad key; anything else means it works.
+                const voices = await provider.listVoices(transient);
+                resultMeta = { bytes: voices.length };
               }
-              // ElevenLabs + MiniMax: listVoices is the cheapest authenticated
-              // call. If the key is invalid the upstream API returns 401 and
-              // our adapter throws with the body — which we surface verbatim.
-              const voices = await provider.listVoices(transient);
+
+              // Persist the validated key so the *next* synthesize call (e.g.
+              // the user clicking Generate in Audio Studio) actually sees it.
+              let saved = false;
+              if (persist && cleanedKey) {
+                const updates: Record<string, string | undefined> = {};
+                updates[envKeyName] = cleanedKey;
+                if (envKeyName === 'MINIMAX_API_KEY') updates.MMX_API_KEY = cleanedKey;
+                await persistVoiceEnv(envPath, env, updates);
+                saved = true;
+              }
+
               return json(res, 200, {
                 ok: true,
                 provider: providerId,
-                bytes: voices.length,
+                ...resultMeta,
                 durationMs: Date.now() - startedAt,
-                message: `${providerId} key works · ${voices.length} voices visible.`,
+                saved,
+                message:
+                  `${providerId} key works · ${resultMeta.bytes} ${
+                    providerId === 'gemini' ? 'audio bytes' : 'voices'
+                  }` + (saved ? ' · saved to .env' : ''),
               });
             } catch (err) {
               return json(res, 200, {
                 ok: false,
                 provider: providerId,
-                error: err instanceof Error ? err.message : 'Validation failed.',
+                error: humanizeProviderError(providerId, err),
               });
             }
           }
@@ -588,6 +645,81 @@ function requireProvider(id: ProviderId): VoiceProvider {
     throw new Error(`Voice provider "${id}" is not registered yet.`);
   }
   return p;
+}
+
+// Some pastes carry hidden BOM / zero-width chars or accidentally include a
+// label like "Bearer sk_..." or "xi-api-key: sk_...". Strip all of that so a
+// validly typed key isn't rejected for paste-noise alone.
+//
+// Char class ​-‏﻿ covers ZWSP, ZWNJ, ZWJ, LRM, RLM, BOM —
+// the usual suspects when copying from a styled webpage or messenger.
+function sanitizeApiKey(raw: string | undefined | null): string {
+  if (!raw) return '';
+  let v = String(raw).trim();
+  // strip wrapping quotes (curly + straight)
+  for (const [open, close] of [
+    ['"', '"'],
+    ["'", "'"],
+    ['“', '”'],
+    ['‘', '’'],
+  ] as const) {
+    if (v.startsWith(open) && v.endsWith(close)) {
+      v = v.slice(1, -1).trim();
+      break;
+    }
+  }
+  // strip common header prefixes the user may have copied alongside the key
+  v = v.replace(/^(?:Bearer|xi-api-key|x-api-key|Authorization)\s*[:=]\s*/i, '').trim();
+  // strip zero-width and BOM-like chars
+  v = v.replace(/[​-‏﻿]/g, '');
+  // strip every internal whitespace — API keys never contain spaces
+  v = v.replace(/\s+/g, '');
+  return v;
+}
+
+// Surface a clean, actionable error from raw provider responses. Inputs look
+// like `ElevenLabs listVoices failed (401): {"detail":{"message":"Invalid API
+// key"}}` — that's noise the user can't act on. Distill to the actionable
+// part.
+function humanizeProviderError(providerId: ProviderId, err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? 'Validation failed.');
+  // Detect status code
+  const statusMatch = raw.match(/\((\d{3})\)/);
+  const status = statusMatch ? Number(statusMatch[1]) : 0;
+  // Try to pull a useful message out of any embedded JSON
+  let detailMessage = '';
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const obj = JSON.parse(jsonMatch[0]) as {
+        detail?: { message?: string; status?: string };
+        error?: { message?: string };
+        message?: string;
+        base_resp?: { status_msg?: string };
+      };
+      detailMessage =
+        obj.detail?.message ??
+        obj.error?.message ??
+        obj.message ??
+        obj.base_resp?.status_msg ??
+        '';
+    } catch {
+      // ignore parse errors
+    }
+  }
+  if (status === 401 || /invalid_api_key|invalid api key|unauthorized/i.test(raw)) {
+    return `Invalid ${providerId} API key — verify the value in your provider dashboard, then paste it again. (Hidden whitespace and "Bearer " prefixes are now stripped automatically.)`;
+  }
+  if (status === 403) {
+    return `${providerId} key rejected (403) — the key is recognized but lacks permission for this endpoint. ${detailMessage}`.trim();
+  }
+  if (status === 404 && providerId === 'elevenlabs' && /voice_not_found/i.test(raw)) {
+    return `Voice ID not found on this account. Pick a voice from the list, or paste an ID that exists in your ElevenLabs library.`;
+  }
+  if (status === 429) {
+    return `${providerId} rate-limited (429). Wait a moment and try again. ${detailMessage}`.trim();
+  }
+  return detailMessage ? `${providerId} ${status || 'error'}: ${detailMessage}` : raw;
 }
 
 function requireKey(env: NodeJS.ProcessEnv, ...names: string[]): string {
@@ -654,6 +786,13 @@ function pickString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.length === 0 ? undefined : trimmed;
+}
+
+// Same as pickString but also strips paste-noise — apply to API keys.
+function pickKey(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const cleaned = sanitizeApiKey(value);
+  return cleaned.length === 0 ? undefined : cleaned;
 }
 
 function requestOrigin(req: Connect.IncomingMessage): string {

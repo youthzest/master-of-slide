@@ -8,6 +8,8 @@ import {
 } from '../lib/narration';
 import type { SlideModule } from '../lib/sdk';
 import {
+  DEFAULT_MODEL_ID,
+  MODELS_BY_PROVIDER,
   type Voice,
   type VoiceProviderId,
   getVoiceConfig,
@@ -41,6 +43,7 @@ type AudioEntry = {
   url: string;
   voiceId: string;
   provider: VoiceProviderId;
+  modelId?: string;
   text: string;
   durationMs?: number;
 };
@@ -87,9 +90,9 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
   const [rows, setRows] = useState<RowState[]>([]);
   const [provider, setProvider] = useState<VoiceProviderId>('elevenlabs');
   const [voiceId, setVoiceId] = useState('');
+  const [modelId, setModelId] = useState('');
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
-  const [providerConfigured, setProviderConfigured] = useState(false);
   const [busyIndex, setBusyIndex] = useState<number | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [, forceTick] = useState(0); // bump after cache writes so UI re-renders
@@ -125,7 +128,7 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
                 : 'elevenlabs');
         setProvider(initialProvider);
         setVoiceId(cfg.defaultVoiceIds[initialProvider] ?? '');
-        setProviderConfigured(cfg.hasKeys[initialProvider]);
+        setModelId(cfg.modelIds[initialProvider] ?? DEFAULT_MODEL_ID[initialProvider]);
       })
       .catch((err) => {
         if (!cancelled) toast.error(err instanceof Error ? err.message : 'Voice config failed');
@@ -147,7 +150,6 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
       .then((vs) => {
         if (cancelled) return;
         setVoices(vs);
-        setProviderConfigured(true);
         // Don't override a custom voiceId that's still valid for this
         // provider, but do replace cross-provider leftovers so a switch
         // from elevenlabs → gemini stops carrying an ElevenLabs ID.
@@ -163,7 +165,6 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
         // Listing failure usually means the provider key isn't configured yet.
         // Gemini's list works without a key, so keep that case quiet.
         if (provider !== 'gemini') {
-          setProviderConfigured(false);
           toast.message(
             'Configure this provider in Voice Settings before generating audio.',
           );
@@ -235,8 +236,13 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
     }
     setBusyIndex(i);
     try {
-      const blob = await synthesizeText(text, { provider, voiceId, format: 'mp3' });
-      cacheAudio(slideId, i, { blob, voiceId, provider, text });
+      const blob = await synthesizeText(text, {
+        provider,
+        voiceId,
+        modelId: modelId || undefined,
+        format: 'mp3',
+      });
+      cacheAudio(slideId, i, { blob, voiceId, provider, modelId, text });
       forceTick((n) => n + 1);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : `Page ${i + 1} synth failed`);
@@ -264,9 +270,16 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
         const blob = await synthesizeText(rows[i].text.trim(), {
           provider,
           voiceId,
+          modelId: modelId || undefined,
           format: 'mp3',
         });
-        cacheAudio(slideId, i, { blob, voiceId, provider, text: rows[i].text.trim() });
+        cacheAudio(slideId, i, {
+          blob,
+          voiceId,
+          provider,
+          modelId,
+          text: rows[i].text.trim(),
+        });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : `Page ${i + 1} failed`);
         // Keep going so a single error doesn't kill the batch.
@@ -327,7 +340,7 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <label className="grid gap-1.5 text-[12px] font-black uppercase">
             Provider
             <Select
@@ -335,12 +348,18 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
               onValueChange={(v) => {
                 const next = v as VoiceProviderId;
                 setProvider(next);
-                // Pull the saved voice for the new provider so the input
-                // reflects whatever Voice Settings set up, not the previous
-                // provider's leftover ID.
+                // Pull the saved voice + model for the new provider so the
+                // inputs reflect whatever Voice Settings set up, not the
+                // previous provider's leftover values.
                 getVoiceConfig()
-                  .then((c) => setVoiceId(c.defaultVoiceIds[next] ?? ''))
-                  .catch(() => setVoiceId(''));
+                  .then((c) => {
+                    setVoiceId(c.defaultVoiceIds[next] ?? '');
+                    setModelId(c.modelIds[next] ?? DEFAULT_MODEL_ID[next]);
+                  })
+                  .catch(() => {
+                    setVoiceId('');
+                    setModelId(DEFAULT_MODEL_ID[next]);
+                  });
                 setVoices([]);
               }}
             >
@@ -355,7 +374,35 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
             </Select>
           </label>
 
-          <div className="grid gap-1.5 text-[12px] font-black uppercase col-span-2">
+          <label className="grid gap-1.5 text-[12px] font-black uppercase">
+            Model
+            <Select
+              value={
+                MODELS_BY_PROVIDER[provider].some((m) => m.id === modelId) ? modelId : ''
+              }
+              onValueChange={setModelId}
+            >
+              <SelectTrigger className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]">
+                <SelectValue placeholder="Pick a model" />
+              </SelectTrigger>
+              <SelectContent className="max-h-80">
+                {MODELS_BY_PROVIDER[provider].map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <input
+              type="text"
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+              placeholder={`default: ${DEFAULT_MODEL_ID[provider]}`}
+              className="w-full rounded-[2px] border-2 border-foreground bg-background px-2.5 py-1.5 font-mono text-[11px] shadow-[2px_2px_0_var(--foreground)] focus:outline-none"
+            />
+          </label>
+
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Voice
             <div className="flex gap-2">
               <Select
@@ -400,13 +447,13 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
               }
               className="w-full rounded-[2px] border-2 border-foreground bg-background px-2.5 py-1.5 font-mono text-[12px] shadow-[3px_3px_0_var(--foreground)] focus:outline-none"
             />
-            <p className="text-[10px] font-medium text-muted-foreground normal-case tracking-normal">
-              Pick from list above OR paste a voice ID directly. Reflects the default saved in
-              Voice Settings on open; edits here don't persist — change permanently in Voice
-              Settings.
-            </p>
           </div>
         </div>
+        <p className="text-[10px] font-medium text-muted-foreground normal-case tracking-normal">
+          Provider · Model · Voice are independent — each provider has its own saved defaults from
+          Voice Settings. Edits here apply to this synth session only; for permanent defaults,
+          change them in Voice Settings.
+        </p>
 
         <div className="flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-3 text-[12px] font-bold">
           <Button size="sm" variant="outline" onClick={autoFillAllEmpty}>
@@ -478,6 +525,7 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
                       <span>
                         ▸ {(cached.blob.size / 1024).toFixed(0)} KB · {cached.provider}/
                         {cached.voiceId.slice(0, 20)}
+                        {cached.modelId ? ` · ${cached.modelId}` : ''}
                       </span>
                     )}
                   </div>
@@ -552,7 +600,13 @@ export function AudioStudioDialog({ open, onOpenChange, slide, slideId }: AudioS
 function cacheAudio(
   slideId: string,
   pageIndex: number,
-  next: { blob: Blob; voiceId: string; provider: VoiceProviderId; text: string },
+  next: {
+    blob: Blob;
+    voiceId: string;
+    provider: VoiceProviderId;
+    modelId?: string;
+    text: string;
+  },
 ) {
   const cache = getCacheFor(slideId);
   const previous = cache.get(pageIndex);
@@ -563,6 +617,7 @@ function cacheAudio(
     url,
     voiceId: next.voiceId,
     provider: next.provider,
+    modelId: next.modelId,
     text: next.text,
   });
 }

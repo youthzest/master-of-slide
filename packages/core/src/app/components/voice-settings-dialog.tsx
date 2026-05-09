@@ -1,7 +1,18 @@
-import { CheckCircle2, ExternalLink, Loader2, Mic, Play, ShieldQuestion, Volume2, XCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  Mic,
+  Play,
+  ShieldQuestion,
+  Volume2,
+  XCircle,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  DEFAULT_MODEL_ID,
+  MODELS_BY_PROVIDER,
   type Voice,
   type VoiceConfig,
   type VoiceProviderId,
@@ -66,6 +77,7 @@ export function VoiceSettingsDialog({
 
   const [apiKey, setApiKey] = useState('');
   const [voiceId, setVoiceId] = useState('');
+  const [modelId, setModelId] = useState('');
   const [testing, setTesting] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -81,6 +93,7 @@ export function VoiceSettingsDialog({
         const initial = (s.defaultProvider ?? 'elevenlabs') as VoiceProviderId;
         setProvider(initial);
         setVoiceId(c.defaultVoiceIds[initial] ?? '');
+        setModelId(c.modelIds[initial] ?? DEFAULT_MODEL_ID[initial]);
         setApiKey('');
       })
       .catch((err) => {
@@ -135,6 +148,15 @@ export function VoiceSettingsDialog({
 
   const providerAvailable = status?.providers[provider]?.available ?? false;
   const providerConfigured = config?.hasKeys[provider] ?? false;
+  const models = MODELS_BY_PROVIDER[provider];
+  const modelInList = models.some((m) => m.id === modelId);
+
+  const refetchConfig = async () => {
+    const [s, c] = await Promise.all([getVoiceStatus(), getVoiceConfig()]);
+    setStatus(s);
+    setConfig(c);
+    return c;
+  };
 
   const save = async () => {
     setSaving(true);
@@ -152,12 +174,16 @@ export function VoiceSettingsDialog({
         if (provider === 'gemini') payload.geminiVoiceId = voiceId.trim();
         if (provider === 'mmx') payload.mmxVoiceId = voiceId.trim();
       }
+      if (modelId.trim()) {
+        if (provider === 'elevenlabs') payload.elevenlabsModelId = modelId.trim();
+        if (provider === 'gemini') payload.geminiModelId = modelId.trim();
+        if (provider === 'mmx') payload.mmxModelId = modelId.trim();
+      }
       await saveVoiceConfig(payload);
-      toast.success(`Saved. Default voice set to ${PROVIDER_LABELS[provider]}.`);
-      // Refetch so subsequent voice listing works without reopen
-      const [s, c] = await Promise.all([getVoiceStatus(), getVoiceConfig()]);
-      setStatus(s);
-      setConfig(c);
+      toast.success(
+        `Saved · ${PROVIDER_LABELS[provider]} · model ${modelId || DEFAULT_MODEL_ID[provider]}`,
+      );
+      await refetchConfig();
       setApiKey('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Voice save failed');
@@ -174,7 +200,12 @@ export function VoiceSettingsDialog({
     setPreviewLoading(voiceId);
     try {
       const text = sampleTextFor(voiceId, voices);
-      const blob = await synthesizeText(text, { provider, voiceId, format: 'mp3' });
+      const blob = await synthesizeText(text, {
+        provider,
+        voiceId,
+        modelId: modelId || undefined,
+        format: 'mp3',
+      });
       const url = URL.createObjectURL(blob);
       if (audioRef.current) {
         audioRef.current.pause();
@@ -210,10 +241,10 @@ export function VoiceSettingsDialog({
               onValueChange={(v) => {
                 const next = v as VoiceProviderId;
                 setProvider(next);
-                // Reset voiceId immediately so an ID typed for a previous
-                // provider doesn't remain visible in the input field while
-                // listVoices() is still in flight for the new one.
+                // Reset voiceId + modelId immediately so leftover values from
+                // the previous provider don't leak into UI/save payload.
                 setVoiceId(config?.defaultVoiceIds[next] ?? '');
+                setModelId(config?.modelIds[next] ?? DEFAULT_MODEL_ID[next]);
                 setApiKey('');
                 setVoices([]);
               }}
@@ -250,15 +281,24 @@ export function VoiceSettingsDialog({
                   const result = await testVoiceConnection(provider, {
                     apiKey: apiKey.trim() || undefined,
                     voiceId: voiceId.trim() || undefined,
+                    modelId: modelId.trim() || undefined,
                   });
                   if (result.ok) {
                     toast.success(
-                      `${provider} OK · ${result.bytes ?? 0} bytes · ${result.durationMs ?? 0}ms`,
+                      `${PROVIDER_LABELS[provider]} OK · ${result.bytes ?? 0} ${
+                        provider === 'gemini' ? 'audio bytes' : 'voices'
+                      } · ${result.durationMs ?? 0}ms${result.saved ? ' · saved' : ''}`,
                       { icon: <CheckCircle2 className="size-4 text-green-600" /> },
                     );
+                    // Refresh hasKeys + voice list so subsequent actions see the persisted key.
+                    if (result.saved) {
+                      await refetchConfig();
+                      setApiKey('');
+                    }
                   } else {
-                    toast.error(result.error ?? `${provider} test failed`, {
+                    toast.error(result.error ?? `${PROVIDER_LABELS[provider]} test failed`, {
                       icon: <XCircle className="size-4 text-red-600" />,
+                      duration: 8000,
                     });
                   }
                 } catch (err) {
@@ -303,7 +343,44 @@ export function VoiceSettingsDialog({
               }
               className="border-2 border-foreground font-mono shadow-[3px_3px_0_var(--foreground)]"
             />
+            <p className="text-[10px] font-medium leading-snug text-muted-foreground normal-case tracking-normal">
+              Pasted keys are auto-cleaned: hidden whitespace, BOM, and "Bearer " prefixes are
+              stripped before saving so a 401 never comes from paste-noise.
+            </p>
           </label>
+
+          <div className="grid gap-1.5 text-[12px] font-black uppercase">
+            Model
+            <Select
+              value={modelInList ? modelId : ''}
+              onValueChange={(v) => setModelId(v)}
+              disabled={!providerAvailable}
+            >
+              <SelectTrigger className="border-2 border-foreground shadow-[3px_3px_0_var(--foreground)]">
+                <SelectValue placeholder="Pick a model" />
+              </SelectTrigger>
+              <SelectContent className="max-h-80">
+                {models.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <span className="font-semibold">{m.label}</span>
+                    <span className="ml-2 text-[10px] font-medium text-muted-foreground">
+                      {m.description}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={modelId}
+              onChange={(e) => setModelId(e.target.value)}
+              placeholder={`Custom model id (default: ${DEFAULT_MODEL_ID[provider]})`}
+              className="border-2 border-foreground font-mono text-[12px] shadow-[3px_3px_0_var(--foreground)]"
+            />
+            <p className="text-[10px] font-medium leading-snug text-muted-foreground normal-case tracking-normal">
+              Pick from the list OR paste a custom model id (e.g. an unreleased preview). Models are
+              independent per provider — switching providers loads that provider's saved model.
+            </p>
+          </div>
 
           <div className="grid gap-1.5 text-[12px] font-black uppercase">
             Voice
@@ -362,12 +439,12 @@ export function VoiceSettingsDialog({
               }
               className="border-2 border-foreground font-mono text-[12px] shadow-[3px_3px_0_var(--foreground)]"
             />
-            <p className="text-[10px] font-medium leading-snug text-muted-foreground">
+            <p className="text-[10px] font-medium leading-snug text-muted-foreground normal-case tracking-normal">
               Pick from the list above OR paste any voice ID directly — works with shared voices,
               community voices, or custom clones from another account.
             </p>
             {voiceId && voices.find((v) => v.voiceId === voiceId)?.description && (
-              <p className="text-[11px] font-medium text-muted-foreground">
+              <p className="text-[11px] font-medium text-muted-foreground normal-case tracking-normal">
                 {voices.find((v) => v.voiceId === voiceId)?.description}
               </p>
             )}
