@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react';
 import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
+import type { CSSProperties } from 'react';
 import coverHero from './assets/cover-hero_001.jpg';
 import ladderArt from './assets/ladder_001.jpg';
 
@@ -76,7 +76,15 @@ const keyframes = `
 const Style = () => <style>{keyframes}</style>;
 
 /* ────── primitives ────── */
-const Eyebrow = ({ children, color = C.accent, delay = 0 }: { children: React.ReactNode; color?: string; delay?: number }) => (
+const Eyebrow = ({
+  children,
+  color = C.accent,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  color?: string;
+  delay?: number;
+}) => (
   <div
     className="r-fadeup"
     style={{
@@ -136,8 +144,18 @@ const Heading = ({ children, size = 84 }: { children: React.ReactNode; size?: nu
   </h2>
 );
 
-const Body = ({ children, size = 26, color = C.text, maxWidth = 1500, delay = 200 }: {
-  children: React.ReactNode; size?: number; color?: string; maxWidth?: number; delay?: number;
+const Body = ({
+  children,
+  size = 26,
+  color = C.text,
+  maxWidth = 1500,
+  delay = 200,
+}: {
+  children: React.ReactNode;
+  size?: number;
+  color?: string;
+  maxWidth?: number;
+  delay?: number;
 }) => (
   <p
     className="r-fadeup"
@@ -162,7 +180,15 @@ const Rule = ({ width = 220, delay = 100 }: { width?: number; delay?: number }) 
   />
 );
 
-const Pill = ({ children, color = C.accent, fill = C.accentSoft }: { children: React.ReactNode; color?: string; fill?: string }) => (
+const Pill = ({
+  children,
+  color = C.accent,
+  fill = C.accentSoft,
+}: {
+  children: React.ReactNode;
+  color?: string;
+  fill?: string;
+}) => (
   <span
     style={{
       display: 'inline-flex',
@@ -235,18 +261,25 @@ const Cover: Page = () => (
           animationDelay: '120ms',
         }}
       >
-        주식 리치고
+        Next Finance
       </h1>
       <Heading size={56}>유료화 vs 오픈소스 vs 하이브리드</Heading>
       <Rule width={300} delay={300} />
       <Body size={28} maxWidth={920} delay={400}>
-        30년 투자 인사이트 SaaS의 출시 결정. <strong>이분법은 잘못된 프레임</strong>이며,
-        오픈 코어 + 단계적 분리 출시가 30년 평판 자산을 가장 안전하게 확장한다.
+        30년 투자 인사이트 SaaS의 출시 결정. <strong>이분법은 잘못된 프레임</strong>이며, 오픈 코어
+        + 단계적 분리 출시가 30년 평판 자산을 가장 안전하게 확장한다.
       </Body>
-      <div className="r-fadeup" style={{ animationDelay: '600ms', display: 'flex', gap: 12, marginTop: 12 }}>
+      <div
+        className="r-fadeup"
+        style={{ animationDelay: '600ms', display: 'flex', gap: 12, marginTop: 12 }}
+      >
         <Pill>14 pages</Pill>
-        <Pill color={C.warm} fill={C.warmSoft}>의사결정-준비</Pill>
-        <Pill color={C.muted} fill="transparent">parent: richgo.ai</Pill>
+        <Pill color={C.warm} fill={C.warmSoft}>
+          의사결정-준비
+        </Pill>
+        <Pill color={C.muted} fill="transparent">
+          parent: richgo.ai
+        </Pill>
       </div>
     </div>
     <Footer pageNum={1} section="Cover" />
@@ -285,11 +318,21 @@ const TLDR: Page = () => {
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 36 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 36,
+        }}
+      >
         <Eyebrow>TL;DR · 30초 요약</Eyebrow>
         <Heading size={92}>다섯 줄 결론.</Heading>
         <Rule width={260} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 24, marginTop: 24 }}>
+        <div
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 24, marginTop: 24 }}
+        >
           {points.map((p, i) => (
             <div
               key={p.n}
@@ -305,13 +348,31 @@ const TLDR: Page = () => {
                 gap: 16,
               }}
             >
-              <div style={{ fontFamily: F.serif, fontSize: 44, fontWeight: 700, color: C.accent, lineHeight: 1 }}>
+              <div
+                style={{
+                  fontFamily: F.serif,
+                  fontSize: 44,
+                  fontWeight: 700,
+                  color: C.accent,
+                  lineHeight: 1,
+                }}
+              >
                 {p.n}
               </div>
-              <div style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 700, lineHeight: 1.3, color: C.text }}>
+              <div
+                style={{
+                  fontFamily: F.serif,
+                  fontSize: 26,
+                  fontWeight: 700,
+                  lineHeight: 1.3,
+                  color: C.text,
+                }}
+              >
                 {p.title}
               </div>
-              <div style={{ fontFamily: F.sans, fontSize: 17, lineHeight: 1.55, color: C.muted }}>{p.body}</div>
+              <div style={{ fontFamily: F.sans, fontSize: 17, lineHeight: 1.55, color: C.muted }}>
+                {p.body}
+              </div>
             </div>
           ))}
         </div>
@@ -324,21 +385,38 @@ const TLDR: Page = () => {
 /* ─────────────── 3. Assets ─────────────── */
 const Assets: Page = () => {
   const rows = [
-    { k: '🏢 부동산 리치고 운영', v: 'MAU 100만', note: '검증된 데이터 리터러시 사용자 · 결제·CS·법무 인프라 보유' },
-    { k: '📈 주식투자 트랙레코드', v: '30년 + 점수화 알고리즘', note: 'out-of-sample 외부 검증은 미완료' },
+    {
+      k: '🏢 부동산 리치고 운영',
+      v: 'MAU 100만',
+      note: '검증된 데이터 리터러시 사용자 · 결제·CS·법무 인프라 보유',
+    },
+    {
+      k: '📈 주식투자 트랙레코드',
+      v: '30년 + 점수화 알고리즘',
+      note: 'out-of-sample 외부 검증은 미완료',
+    },
     { k: '🛠 운영 노하우', v: '데이터 SaaS · 결제·CS·법무', note: '한계비용 낮음' },
     { k: '🧠 평판 자본', v: '부동산 데이터 분석 권위', note: '⚠️ 확장 시 희석 위험 동시 존재' },
   ];
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 32 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 32,
+        }}
+      >
         <Eyebrow>§1 · 의사결정 맥락</Eyebrow>
         <Heading>사용자가 가진 자산.</Heading>
         <Rule width={280} />
         <Body size={28} maxWidth={1500}>
           한국 핀테크 슈퍼앱 비교군 — 토스 MAU 약 1,977만 (2025), 카카오페이 305만 (1년 만에 3배).
-          리치고의 100만은 의미 있지만, <strong>주식 SaaS 자동 전이는 검증되지 않은 가설</strong>이다.
+          리치고의 100만은 의미 있지만, <strong>주식 SaaS 자동 전이는 검증되지 않은 가설</strong>
+          이다.
         </Body>
 
         <div
@@ -364,17 +442,29 @@ const Assets: Page = () => {
                 alignItems: 'center',
               }}
             >
-              <div style={{ fontFamily: F.sans, fontSize: 22, fontWeight: 600, color: C.text }}>{r.k}</div>
-              <div style={{ fontFamily: F.serif, fontSize: 32, fontWeight: 700, color: C.accent }}>{r.v}</div>
-              <div style={{ fontFamily: F.sans, fontSize: 20, color: C.muted, lineHeight: 1.5 }}>{r.note}</div>
+              <div style={{ fontFamily: F.sans, fontSize: 22, fontWeight: 600, color: C.text }}>
+                {r.k}
+              </div>
+              <div style={{ fontFamily: F.serif, fontSize: 32, fontWeight: 700, color: C.accent }}>
+                {r.v}
+              </div>
+              <div style={{ fontFamily: F.sans, fontSize: 20, color: C.muted, lineHeight: 1.5 }}>
+                {r.note}
+              </div>
             </div>
           ))}
         </div>
 
         <div style={{ marginTop: 16, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-          <Pill color={C.muted} fill="transparent">자료: 모바일인덱스 2025 상반기</Pill>
-          <Pill color={C.muted} fill="transparent">FirstPageSage SaaS 전환율 2026</Pill>
-          <Pill color={C.muted} fill="transparent">SPIVA 2024 (S&P DJI)</Pill>
+          <Pill color={C.muted} fill="transparent">
+            자료: 모바일인덱스 2025 상반기
+          </Pill>
+          <Pill color={C.muted} fill="transparent">
+            FirstPageSage SaaS 전환율 2026
+          </Pill>
+          <Pill color={C.muted} fill="transparent">
+            SPIVA 2024 (S&P DJI)
+          </Pill>
         </div>
       </div>
       <Footer pageNum={3} section="§1 자산" />
@@ -404,7 +494,15 @@ const Question: Page = () => {
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 32 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 32,
+        }}
+      >
         <Eyebrow>§1.3 · 진짜 질문</Eyebrow>
         <Heading>표면 질문 → 본질 질문.</Heading>
         <Rule width={280} />
@@ -422,7 +520,8 @@ const Question: Page = () => {
             maxWidth: 1500,
           }}
         >
-          ❌ <strong>표면 질문</strong>: "유료화? 오픈소스?" — 양자택일 프레임은 결정의 진짜 축을 놓친다.
+          ❌ <strong>표면 질문</strong>: "유료화? 오픈소스?" — 양자택일 프레임은 결정의 진짜 축을
+          놓친다.
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 8 }}>
@@ -456,10 +555,26 @@ const Question: Page = () => {
                 {it.label}
               </div>
               <div>
-                <div style={{ fontFamily: F.serif, fontSize: 32, fontWeight: 700, lineHeight: 1.3, color: C.text }}>
+                <div
+                  style={{
+                    fontFamily: F.serif,
+                    fontSize: 32,
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                    color: C.text,
+                  }}
+                >
                   {it.q}
                 </div>
-                <div style={{ marginTop: 8, fontFamily: F.sans, fontSize: 20, color: C.muted, lineHeight: 1.5 }}>
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontFamily: F.sans,
+                    fontSize: 20,
+                    color: C.muted,
+                    lineHeight: 1.5,
+                  }}
+                >
                   {it.sub}
                 </div>
               </div>
@@ -474,7 +589,16 @@ const Question: Page = () => {
 
 /* ─────────────── 5. Three Options ─────────────── */
 const ThreeOptions: Page = () => {
-  const dims = ['단기 매출', '시장 파급력', '평판 효과', 'IP 유출 리스크', '법적 리스크', 'CAC 효율', '확장성 (B2B)', '30년 평판 보호'];
+  const dims = [
+    '단기 매출',
+    '시장 파급력',
+    '평판 효과',
+    'IP 유출 리스크',
+    '법적 리스크',
+    'CAC 효율',
+    '확장성 (B2B)',
+    '30년 평판 보호',
+  ];
   const grid: Array<{ label: string; tone: 'red' | 'amber' | 'green' }>[] = [
     // A 완전 유료
     [
@@ -523,7 +647,15 @@ const ThreeOptions: Page = () => {
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 24,
+        }}
+      >
         <Eyebrow>§2 · 옵션 매트릭스</Eyebrow>
         <Heading size={68}>세 가지 길, 한 페이지에서 비교.</Heading>
         <Rule width={260} />
@@ -541,7 +673,9 @@ const ThreeOptions: Page = () => {
           }}
         >
           {/* header row */}
-          <div style={{ padding: '18px 20px', borderRight: `1px solid ${C.line}`, background: C.bg }} />
+          <div
+            style={{ padding: '18px 20px', borderRight: `1px solid ${C.line}`, background: C.bg }}
+          />
           {cols.map((c) => (
             <div
               key={c.name}
@@ -552,10 +686,19 @@ const ThreeOptions: Page = () => {
                 background: c.accent ? C.accentSoft : C.bg,
               }}
             >
-              <div style={{ fontFamily: F.serif, fontSize: 24, fontWeight: 700, color: c.accent ? C.accent : C.text }}>
+              <div
+                style={{
+                  fontFamily: F.serif,
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: c.accent ? C.accent : C.text,
+                }}
+              >
                 {c.name}
               </div>
-              <div style={{ marginTop: 4, fontFamily: F.sans, fontSize: 16, color: C.muted }}>{c.case}</div>
+              <div style={{ marginTop: 4, fontFamily: F.sans, fontSize: 16, color: C.muted }}>
+                {c.case}
+              </div>
             </div>
           ))}
           {/* dim rows */}
@@ -619,7 +762,11 @@ const ThreeOptions: Page = () => {
 /* ─────────────── 6. Recommended: Open Core ─────────────── */
 const Recommended: Page = () => {
   const evidence = [
-    { metric: '5×', label: '오픈 코어 단가 분리 시 매출 잠재력', src: 'GitLab buyer-based open core' },
+    {
+      metric: '5×',
+      label: '오픈 코어 단가 분리 시 매출 잠재력',
+      src: 'GitLab buyer-based open core',
+    },
     { metric: '69%', label: 'GitLab YoY 매출 성장 (2022)', src: 'FourWeekMBA 2026' },
     { metric: '10–15%', label: '단가 분리 시 추가 매출 (vs 단순 가격)', src: 'Gartner research' },
     { metric: '$66.84B', label: '오픈소스 서비스 시장 규모 (2026)', src: 'Statista' },
@@ -627,17 +774,27 @@ const Recommended: Page = () => {
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 28,
+        }}
+      >
         <Eyebrow>§3 · 권고 전략</Eyebrow>
         <Heading size={92}>오픈 코어 하이브리드.</Heading>
         <Rule width={280} />
         <Body size={28} maxWidth={1500}>
-          이미 검증된 패턴이다. <strong>GitLab · Elastic · Red Hat · MongoDB</strong>는
-          모두 핵심을 공개해 학술적 권위를 얻고, 자동화·운영·보안을 유료화로 회수한다.
-          한국 핀테크 SaaS 영역에서 같은 구조를 처음 도입하는 자가 시장 표준이 된다.
+          이미 검증된 패턴이다. <strong>GitLab · Elastic · Red Hat · MongoDB</strong>는 모두 핵심을
+          공개해 학술적 권위를 얻고, 자동화·운영·보안을 유료화로 회수한다. 한국 핀테크 SaaS 영역에서
+          같은 구조를 처음 도입하는 자가 시장 표준이 된다.
         </Body>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18, marginTop: 12 }}>
+        <div
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18, marginTop: 12 }}
+        >
           {evidence.map((e, i) => (
             <div
               key={e.label}
@@ -653,10 +810,26 @@ const Recommended: Page = () => {
                 gap: 12,
               }}
             >
-              <div style={{ fontFamily: F.serif, fontSize: 56, fontWeight: 700, color: C.accent, lineHeight: 1 }}>
+              <div
+                style={{
+                  fontFamily: F.serif,
+                  fontSize: 56,
+                  fontWeight: 700,
+                  color: C.accent,
+                  lineHeight: 1,
+                }}
+              >
                 {e.metric}
               </div>
-              <div style={{ fontFamily: F.sans, fontSize: 19, lineHeight: 1.4, color: C.text, fontWeight: 600 }}>
+              <div
+                style={{
+                  fontFamily: F.sans,
+                  fontSize: 19,
+                  lineHeight: 1.4,
+                  color: C.text,
+                  fontWeight: 600,
+                }}
+              >
                 {e.label}
               </div>
               <div
@@ -685,8 +858,9 @@ const Recommended: Page = () => {
           }}
         >
           <div style={{ fontFamily: F.sans, fontSize: 22, color: C.text, lineHeight: 1.55 }}>
-            <strong>4대 설계 원칙</strong> — ① 공개·폐쇄 분리선 / ② 법적 격벽(Firewall) /
-            ③ 반증 가능한 가설 (실패 조건 사전 명시) / ④ B2C → B2B 순서 (B2C로 데이터 만들고 화이트레이블로 회수)
+            <strong>4대 설계 원칙</strong> — ① 공개·폐쇄 분리선 / ② 법적 격벽(Firewall) / ③ 반증
+            가능한 가설 (실패 조건 사전 명시) / ④ B2C → B2B 순서 (B2C로 데이터 만들고 화이트레이블로
+            회수)
           </div>
         </div>
       </div>
@@ -703,28 +877,48 @@ const Ladder: Page = () => {
       name: '🟢 무료 공개 (평판 자본)',
       bg: C.greenSoft,
       stroke: C.green,
-      items: ['투자 철학·방법론 백서', '백테스팅 프레임워크 (MIT/BSL)', '기본 지표 정의', '샘플 시각화'],
+      items: [
+        '투자 철학·방법론 백서',
+        '백테스팅 프레임워크 (MIT/BSL)',
+        '기본 지표 정의',
+        '샘플 시각화',
+      ],
     },
     {
       tier: 'L2',
       name: '🟡 무료 콘텐츠 (관계 자본)',
       bg: C.warmSoft,
       stroke: C.warm,
-      items: ['주간 무료 리서치 뉴스레터', '월간 열린 라이브 Q&A', '정정·시행착오 공개', '백서 업데이트'],
+      items: [
+        '주간 무료 리서치 뉴스레터',
+        '월간 열린 라이브 Q&A',
+        '정정·시행착오 공개',
+        '백서 업데이트',
+      ],
     },
     {
       tier: 'L3',
       name: '🔵 유료 구독 (수익 코어)',
       bg: 'rgba(37, 99, 235, 0.08)',
       stroke: '#2563eb',
-      items: ['실시간 스코어링 엔진 API', '유료 멤버 슬랙 커뮤니티', '개인화 리포트·알림', '월 1~3만원 / 연 25만원'],
+      items: [
+        '실시간 스코어링 엔진 API',
+        '유료 멤버 슬랙 커뮤니티',
+        '개인화 리포트·알림',
+        '월 1~3만원 / 연 25만원',
+      ],
     },
     {
       tier: 'L4',
       name: '🟣 B2B / 생태계 (확장 자본)',
       bg: C.accentSoft,
       stroke: C.accent,
-      items: ['증권사 화이트레이블 라이선스', '광고·제휴 네트워크', '데이터 벤더 제휴', '인덱스·지표 공급'],
+      items: [
+        '증권사 화이트레이블 라이선스',
+        '광고·제휴 네트워크',
+        '데이터 벤더 제휴',
+        '인덱스·지표 공급',
+      ],
     },
   ];
   return (
@@ -746,7 +940,8 @@ const Ladder: Page = () => {
           <Body size={22} maxWidth={1100}>
             아래로 갈수록 가치가 응축되고 가격이 붙는다. <strong>1층은 평판 자본</strong>,
             <strong> 2층은 관계 자본</strong>, <strong>3층은 수익 코어</strong>,
-            <strong> 4층은 확장 자본</strong>. 각 층 사이에 분리선이 명확해야 IP 유출과 법적 회색지대가 정리된다.
+            <strong> 4층은 확장 자본</strong>. 각 층 사이에 분리선이 명확해야 IP 유출과 법적
+            회색지대가 정리된다.
           </Body>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
@@ -766,10 +961,24 @@ const Ladder: Page = () => {
                   alignItems: 'center',
                 }}
               >
-                <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: l.stroke }}>{l.tier}</div>
+                <div
+                  style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: l.stroke }}
+                >
+                  {l.tier}
+                </div>
                 <div>
-                  <div style={{ fontFamily: F.sans, fontSize: 19, fontWeight: 700, color: C.text }}>{l.name}</div>
-                  <div style={{ marginTop: 4, fontFamily: F.sans, fontSize: 15, color: C.muted, lineHeight: 1.5 }}>
+                  <div style={{ fontFamily: F.sans, fontSize: 19, fontWeight: 700, color: C.text }}>
+                    {l.name}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontFamily: F.sans,
+                      fontSize: 15,
+                      color: C.muted,
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {l.items.join(' · ')}
                   </div>
                 </div>
@@ -817,14 +1026,22 @@ const Positioning: Page = () => {
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 28,
+        }}
+      >
         <Eyebrow>§3.3 · 포지셔닝 재정의</Eyebrow>
         <Heading size={84}>수익률을 팔지 마라. 의사결정을 팔라.</Heading>
         <Rule width={280} />
         <Body size={22} maxWidth={1500}>
-          <strong>2024.8.14부터 자본시장법이 양방향 영업을 금지</strong>했다. VIP 채팅·리딩방·실시간 종목 추천은
-          유사투자자문업 등록 대상이자 집단소송의 직접 표적이다. 30년 평판이라는 고유 자산을
-          단타 마케팅에 태우는 것은 가장 비효율적인 사용이다.
+          <strong>2024.8.14부터 자본시장법이 양방향 영업을 금지</strong>했다. VIP 채팅·리딩방·실시간
+          종목 추천은 유사투자자문업 등록 대상이자 집단소송의 직접 표적이다. 30년 평판이라는 고유
+          자산을 단타 마케팅에 태우는 것은 가장 비효율적인 사용이다.
         </Body>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28, marginTop: 16 }}>
@@ -838,12 +1055,24 @@ const Positioning: Page = () => {
               padding: 32,
             }}
           >
-            <div style={{ fontFamily: F.sans, fontSize: 22, fontWeight: 700, color: C.red, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontFamily: F.sans,
+                fontSize: 22,
+                fontWeight: 700,
+                color: C.red,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+              }}
+            >
               ❌ 절대 금지
             </div>
             <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {noList.map((t) => (
-                <div key={t} style={{ fontFamily: F.sans, fontSize: 22, color: C.text, lineHeight: 1.4 }}>
+                <div
+                  key={t}
+                  style={{ fontFamily: F.sans, fontSize: 22, color: C.text, lineHeight: 1.4 }}
+                >
                   · {t}
                 </div>
               ))}
@@ -860,12 +1089,24 @@ const Positioning: Page = () => {
               padding: 32,
             }}
           >
-            <div style={{ fontFamily: F.sans, fontSize: 22, fontWeight: 700, color: C.green, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontFamily: F.sans,
+                fontSize: 22,
+                fontWeight: 700,
+                color: C.green,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+              }}
+            >
               ✅ 권장 포지셔닝
             </div>
             <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {yesList.map((t) => (
-                <div key={t} style={{ fontFamily: F.sans, fontSize: 22, color: C.text, lineHeight: 1.4 }}>
+                <div
+                  key={t}
+                  style={{ fontFamily: F.sans, fontSize: 22, color: C.text, lineHeight: 1.4 }}
+                >
                   · {t}
                 </div>
               ))}
@@ -888,8 +1129,9 @@ const Positioning: Page = () => {
             maxWidth: 1500,
           }}
         >
-          <strong style={{ color: C.text }}>1면 박스 권장</strong> · 홈페이지/백서/뉴스레터 1면에 고정:
-          “종목 추천 / 매수·매도 시그널 / 수익률 보장 / 리딩방 연계 — <em>우리는 다음을 하지 않습니다.</em>”
+          <strong style={{ color: C.text }}>1면 박스 권장</strong> · 홈페이지/백서/뉴스레터 1면에
+          고정: “종목 추천 / 매수·매도 시그널 / 수익률 보장 / 리딩방 연계 —{' '}
+          <em>우리는 다음을 하지 않습니다.</em>”
         </div>
       </div>
       <Footer pageNum={8} section="§3.3 포지셔닝" />
@@ -902,16 +1144,32 @@ const Firewall: Page = () => {
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 28,
+        }}
+      >
         <Eyebrow>§3.4 · 브랜드 격벽</Eyebrow>
         <Heading size={84}>별도 법인. 별도 도메인. 별도 책임.</Heading>
         <Rule width={280} />
         <Body size={24} maxWidth={1500}>
-          한쪽의 행정처분이 다른 쪽으로 전이되지 않도록 회계·책임을 통합하지 말 것.
-          마케팅 제휴만 허용 — 단일 통합 브랜드 금지.
+          한쪽의 행정처분이 다른 쪽으로 전이되지 않도록 회계·책임을 통합하지 말 것. 마케팅 제휴만
+          허용 — 단일 통합 브랜드 금지.
         </Body>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px 1fr', gap: 32, marginTop: 24, alignItems: 'stretch' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 220px 1fr',
+            gap: 32,
+            marginTop: 24,
+            alignItems: 'stretch',
+          }}
+        >
           <div
             className="r-fadeup"
             style={{
@@ -925,10 +1183,27 @@ const Firewall: Page = () => {
               gap: 14,
             }}
           >
-            <div style={{ fontFamily: F.sans, fontSize: 16, fontWeight: 700, letterSpacing: '0.18em', color: '#2563eb', textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontFamily: F.sans,
+                fontSize: 16,
+                fontWeight: 700,
+                letterSpacing: '0.18em',
+                color: '#2563eb',
+                textTransform: 'uppercase',
+              }}
+            >
               기존 법인
             </div>
-            <div style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+            <div
+              style={{
+                fontFamily: F.serif,
+                fontSize: 40,
+                fontWeight: 700,
+                color: C.text,
+                lineHeight: 1.2,
+              }}
+            >
               🏢 (주)리치고
             </div>
             <div style={{ fontFamily: F.sans, fontSize: 19, color: C.text, lineHeight: 1.5 }}>
@@ -938,17 +1213,46 @@ const Firewall: Page = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, letterSpacing: '0.16em', color: C.muted, textTransform: 'uppercase' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: F.sans,
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: '0.16em',
+                color: C.muted,
+                textTransform: 'uppercase',
+              }}
+            >
               firewall
             </div>
-            <div style={{ width: 4, flex: 1, background: `repeating-linear-gradient(180deg, ${C.warm} 0 8px, transparent 8px 16px)` }} />
+            <div
+              style={{
+                width: 4,
+                flex: 1,
+                background: `repeating-linear-gradient(180deg, ${C.warm} 0 8px, transparent 8px 16px)`,
+              }}
+            />
             <div style={{ fontFamily: F.sans, fontSize: 16, color: C.warm, fontWeight: 600 }}>
               제휴 마케팅만 ✓
               <br />
               회계·책임 통합 ✗
             </div>
-            <div style={{ width: 4, flex: 1, background: `repeating-linear-gradient(180deg, ${C.warm} 0 8px, transparent 8px 16px)` }} />
+            <div
+              style={{
+                width: 4,
+                flex: 1,
+                background: `repeating-linear-gradient(180deg, ${C.warm} 0 8px, transparent 8px 16px)`,
+              }}
+            />
           </div>
 
           <div
@@ -964,10 +1268,27 @@ const Firewall: Page = () => {
               gap: 14,
             }}
           >
-            <div style={{ fontFamily: F.sans, fontSize: 16, fontWeight: 700, letterSpacing: '0.18em', color: C.warm, textTransform: 'uppercase' }}>
+            <div
+              style={{
+                fontFamily: F.sans,
+                fontSize: 16,
+                fontWeight: 700,
+                letterSpacing: '0.18em',
+                color: C.warm,
+                textTransform: 'uppercase',
+              }}
+            >
               신설 법인 (예시)
             </div>
-            <div style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+            <div
+              style={{
+                fontFamily: F.serif,
+                fontSize: 40,
+                fontWeight: 700,
+                color: C.text,
+                lineHeight: 1.2,
+              }}
+            >
               📈 StockGo · 인사이트고
             </div>
             <div style={{ fontFamily: F.sans, fontSize: 19, color: C.text, lineHeight: 1.5 }}>
@@ -1053,12 +1374,22 @@ const Roadmap: Page = () => {
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 28,
+        }}
+      >
         <Eyebrow>§4 · 단계적 실행 로드맵</Eyebrow>
         <Heading size={84}>첫 90일은 검증의 시간.</Heading>
         <Rule width={280} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginTop: 16 }}>
+        <div
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginTop: 16 }}
+        >
           {phases.map((p, i) => (
             <div
               key={p.tag}
@@ -1094,16 +1425,43 @@ const Roadmap: Page = () => {
                   CRITICAL
                 </span>
               )}
-              <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, letterSpacing: '0.18em', color: C.accent, textTransform: 'uppercase' }}>
+              <div
+                style={{
+                  fontFamily: F.sans,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  letterSpacing: '0.18em',
+                  color: C.accent,
+                  textTransform: 'uppercase',
+                }}
+              >
                 {p.tag} · {p.time}
               </div>
-              <div style={{ fontFamily: F.serif, fontSize: 30, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+              <div
+                style={{
+                  fontFamily: F.serif,
+                  fontSize: 30,
+                  fontWeight: 700,
+                  color: C.text,
+                  lineHeight: 1.2,
+                }}
+              >
                 {p.label}
               </div>
               <div style={{ height: 1, background: C.line, margin: '4px 0' }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {p.items.map((it) => (
-                  <div key={it} style={{ fontFamily: F.sans, fontSize: 15, color: C.text, lineHeight: 1.5, display: 'flex', gap: 8 }}>
+                  <div
+                    key={it}
+                    style={{
+                      fontFamily: F.sans,
+                      fontSize: 15,
+                      color: C.text,
+                      lineHeight: 1.5,
+                      display: 'flex',
+                      gap: 8,
+                    }}
+                  >
                     <span style={{ color: C.accent, fontWeight: 700 }}>·</span>
                     <span>{it}</span>
                   </div>
@@ -1113,7 +1471,16 @@ const Roadmap: Page = () => {
           ))}
         </div>
 
-        <div style={{ marginTop: 8, display: 'flex', gap: 12, color: C.muted, fontFamily: F.sans, fontSize: 16 }}>
+        <div
+          style={{
+            marginTop: 8,
+            display: 'flex',
+            gap: 12,
+            color: C.muted,
+            fontFamily: F.sans,
+            fontSize: 16,
+          }}
+        >
           <span>2026-05-08</span>
           <span style={{ flex: 1, height: 1, background: C.line, alignSelf: 'center' }} />
           <span>+ 2주</span>
@@ -1135,7 +1502,11 @@ const KPIs: Page = () => {
   const benchmarks = [
     { metric: '1–5%', label: 'SaaS freemium 평균 전환율', src: 'FirstPageSage 2026 / Pulseahead' },
     { metric: '8–15%', label: 'top-quartile freemium 전환', src: 'Guru Startups 2025' },
-    { metric: '65%', label: '액티브 펀드 언더퍼폼 (US large-cap, 2024)', src: 'SPIVA 2024 (S&P DJI)' },
+    {
+      metric: '65%',
+      label: '액티브 펀드 언더퍼폼 (US large-cap, 2024)',
+      src: 'SPIVA 2024 (S&P DJI)',
+    },
     { metric: '94.1%', label: '20년 누적 액티브 펀드 패배율', src: 'SPIVA 2005–2024' },
   ];
   const kpis = [
@@ -1167,8 +1538,8 @@ const KPIs: Page = () => {
           <Heading size={64}>외부 데이터로 본 현실.</Heading>
           <Rule width={220} />
           <Body size={22} maxWidth={780}>
-            "월 1억 매출"은 핀테크 freemium 단가에서 수학적으로 성립하기 어렵다.
-            액티브 운용은 장기적으로 패시브를 못 이긴다는 SPIVA의 결론은
+            "월 1억 매출"은 핀테크 freemium 단가에서 수학적으로 성립하기 어렵다. 액티브 운용은
+            장기적으로 패시브를 못 이긴다는 SPIVA의 결론은
             <strong> "수익률을 팔지 말고 의사결정을 팔라"</strong>는 본 보고서의 포지셔닝 근거.
           </Body>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
@@ -1184,13 +1555,37 @@ const KPIs: Page = () => {
                   padding: 18,
                 }}
               >
-                <div style={{ fontFamily: F.serif, fontSize: 38, fontWeight: 700, color: C.accent, lineHeight: 1 }}>
+                <div
+                  style={{
+                    fontFamily: F.serif,
+                    fontSize: 38,
+                    fontWeight: 700,
+                    color: C.accent,
+                    lineHeight: 1,
+                  }}
+                >
                   {b.metric}
                 </div>
-                <div style={{ marginTop: 8, fontFamily: F.sans, fontSize: 16, color: C.text, lineHeight: 1.4 }}>
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontFamily: F.sans,
+                    fontSize: 16,
+                    color: C.text,
+                    lineHeight: 1.4,
+                  }}
+                >
                   {b.label}
                 </div>
-                <div style={{ marginTop: 6, fontFamily: F.sans, fontSize: 12, color: C.muted, letterSpacing: '0.04em' }}>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontFamily: F.sans,
+                    fontSize: 12,
+                    color: C.muted,
+                    letterSpacing: '0.04em',
+                  }}
+                >
                   {b.src}
                 </div>
               </div>
@@ -1203,8 +1598,8 @@ const KPIs: Page = () => {
           <Heading size={64}>100명 파일럿 임계점.</Heading>
           <Rule width={220} />
           <Body size={22} maxWidth={780}>
-            출시 전에 <strong>"성공 조건이 아닌 실패 조건"</strong>을 문서화한다.
-            확신을 측정으로 바꾸는 유일한 방법.
+            출시 전에 <strong>"성공 조건이 아닌 실패 조건"</strong>을 문서화한다. 확신을 측정으로
+            바꾸는 유일한 방법.
           </Body>
 
           <div
@@ -1231,7 +1626,9 @@ const KPIs: Page = () => {
                     gap: 16,
                   }}
                 >
-                  <div style={{ fontFamily: F.sans, fontSize: 18, fontWeight: 600, color: C.text }}>{k.name}</div>
+                  <div style={{ fontFamily: F.sans, fontSize: 18, fontWeight: 600, color: C.text }}>
+                    {k.name}
+                  </div>
                   <div>
                     <span
                       style={{
@@ -1262,20 +1659,70 @@ const KPIs: Page = () => {
 /* ─────────────── 12. Risk Matrix ─────────────── */
 const RiskMatrix: Page = () => {
   const risks = [
-    { name: '유사투자자문업 미등록 제재', prob: '높음', impact: '치명적', mit: 'Phase 0 법무 게이트 + 별도 법인', critical: true },
-    { name: '고객 손실 → 집단 소송', prob: '중간', impact: '치명적', mit: '면책 + 전문배상책임보험 + 포지셔닝 재정의', critical: true },
-    { name: '부동산 평판 → 주식 평판 전이 손실', prob: '중간', impact: '큼', mit: '별도 법인·도메인 (격벽 §3.4)', critical: false },
-    { name: 'CAC > LTV (단위경제 붕괴)', prob: '높음', impact: '큼', mit: '100~300명 파일럿 사전 검증', critical: false },
-    { name: '알파 희석 (1만 명 사용 시 슬리피지)', prob: '높음', impact: '중간', mit: '"신호" → "프레임워크" 재정의', critical: false },
-    { name: '30년 트랙레코드 = 운(luck)', prob: '중간', impact: '큼', mit: 'Walk-Forward · p-value 외부 검증', critical: false },
-    { name: '오픈소스 IP 유출 → 경쟁사 활용', prob: '중간', impact: '중간', mit: '핵심 엔진은 폐쇄 + BSL 라이선스', critical: false },
+    {
+      name: '유사투자자문업 미등록 제재',
+      prob: '높음',
+      impact: '치명적',
+      mit: 'Phase 0 법무 게이트 + 별도 법인',
+      critical: true,
+    },
+    {
+      name: '고객 손실 → 집단 소송',
+      prob: '중간',
+      impact: '치명적',
+      mit: '면책 + 전문배상책임보험 + 포지셔닝 재정의',
+      critical: true,
+    },
+    {
+      name: '부동산 평판 → 주식 평판 전이 손실',
+      prob: '중간',
+      impact: '큼',
+      mit: '별도 법인·도메인 (격벽 §3.4)',
+      critical: false,
+    },
+    {
+      name: 'CAC > LTV (단위경제 붕괴)',
+      prob: '높음',
+      impact: '큼',
+      mit: '100~300명 파일럿 사전 검증',
+      critical: false,
+    },
+    {
+      name: '알파 희석 (1만 명 사용 시 슬리피지)',
+      prob: '높음',
+      impact: '중간',
+      mit: '"신호" → "프레임워크" 재정의',
+      critical: false,
+    },
+    {
+      name: '30년 트랙레코드 = 운(luck)',
+      prob: '중간',
+      impact: '큼',
+      mit: 'Walk-Forward · p-value 외부 검증',
+      critical: false,
+    },
+    {
+      name: '오픈소스 IP 유출 → 경쟁사 활용',
+      prob: '중간',
+      impact: '중간',
+      mit: '핵심 엔진은 폐쇄 + BSL 라이선스',
+      critical: false,
+    },
   ];
   const probColor = (p: string) => (p === '높음' ? C.red : p === '중간' ? C.warm : C.green);
   const impactColor = (i: string) => (i === '치명적' ? C.red : i === '큼' ? C.warm : C.green);
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 24,
+        }}
+      >
         <Eyebrow color={C.red}>§5 · 리스크 매트릭스</Eyebrow>
         <Heading size={76}>치명적 리스크는 두 가지뿐.</Heading>
         <Rule width={280} />
@@ -1328,17 +1775,40 @@ const RiskMatrix: Page = () => {
                 background: r.critical ? 'rgba(185, 28, 28, 0.04)' : 'transparent',
               }}
             >
-              <span style={{ fontFamily: F.sans, fontSize: 18, fontWeight: r.critical ? 700 : 500, color: C.text }}>
+              <span
+                style={{
+                  fontFamily: F.sans,
+                  fontSize: 18,
+                  fontWeight: r.critical ? 700 : 500,
+                  color: C.text,
+                }}
+              >
                 {r.critical && <span style={{ color: C.red, marginRight: 8 }}>●</span>}
                 {r.name}
               </span>
-              <span style={{ fontFamily: F.sans, fontSize: 16, fontWeight: 700, color: probColor(r.prob) }}>
+              <span
+                style={{
+                  fontFamily: F.sans,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: probColor(r.prob),
+                }}
+              >
                 {r.prob}
               </span>
-              <span style={{ fontFamily: F.sans, fontSize: 16, fontWeight: 700, color: impactColor(r.impact) }}>
+              <span
+                style={{
+                  fontFamily: F.sans,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: impactColor(r.impact),
+                }}
+              >
                 {r.impact}
               </span>
-              <span style={{ fontFamily: F.sans, fontSize: 16, color: C.muted, lineHeight: 1.4 }}>{r.mit}</span>
+              <span style={{ fontFamily: F.sans, fontSize: 16, color: C.muted, lineHeight: 1.4 }}>
+                {r.mit}
+              </span>
             </div>
           ))}
         </div>
@@ -1351,23 +1821,68 @@ const RiskMatrix: Page = () => {
 /* ─────────────── 13. Immediate Actions ─────────────── */
 const Actions: Page = () => {
   const actions = [
-    { n: '01', title: '법무 자문 의뢰', body: '자본시장법 전문 변호사 컨택. 등록 필요 여부 확정 전까진 마케팅·랜딩·결제 모두 정지.', tag: 'this week' },
-    { n: '02', title: '100명 파일럿 설계서', body: '무료 50 + 유료 50 병행. 가격 1~2만원/월. KPI 4개 명시 (리텐션·신뢰·재결제·NPS).', tag: 'this week' },
-    { n: '03', title: '실패 조건 문서화', body: '§5.2 표를 자신의 숫자로 채워서 .md로 저장. 외부 1인에게 공유하여 자기검열 방지.', tag: 'this week' },
-    { n: '04', title: '백서 목차 1페이지', body: '제목 + 키 메시지 + 근거 연구 5개. 학술 톤. 평판 자본화의 첫 트리거.', tag: '+1주' },
-    { n: '05', title: '무료 뉴스레터 1호', body: '"30년 데이터로 본 평균 회귀의 환상" 같은 학술 톤 1편 (편당 10시간+).', tag: '+1주' },
-    { n: '06', title: '"하지 않는 것 4가지" 박스', body: '종목 추천 / 시그널 / 수익률 보장 / 리딩방 — 홈 1면에 박는다.', tag: '+1주' },
-    { n: '07', title: '1인 vs VC형 결정 메모', body: '검로드·레니 사례 인용해서 가족·공동창업자에게 공유 후 합의.', tag: '+2주' },
+    {
+      n: '01',
+      title: '법무 자문 의뢰',
+      body: '자본시장법 전문 변호사 컨택. 등록 필요 여부 확정 전까진 마케팅·랜딩·결제 모두 정지.',
+      tag: 'this week',
+    },
+    {
+      n: '02',
+      title: '100명 파일럿 설계서',
+      body: '무료 50 + 유료 50 병행. 가격 1~2만원/월. KPI 4개 명시 (리텐션·신뢰·재결제·NPS).',
+      tag: 'this week',
+    },
+    {
+      n: '03',
+      title: '실패 조건 문서화',
+      body: '§5.2 표를 자신의 숫자로 채워서 .md로 저장. 외부 1인에게 공유하여 자기검열 방지.',
+      tag: 'this week',
+    },
+    {
+      n: '04',
+      title: '백서 목차 1페이지',
+      body: '제목 + 키 메시지 + 근거 연구 5개. 학술 톤. 평판 자본화의 첫 트리거.',
+      tag: '+1주',
+    },
+    {
+      n: '05',
+      title: '무료 뉴스레터 1호',
+      body: '"30년 데이터로 본 평균 회귀의 환상" 같은 학술 톤 1편 (편당 10시간+).',
+      tag: '+1주',
+    },
+    {
+      n: '06',
+      title: '"하지 않는 것 4가지" 박스',
+      body: '종목 추천 / 시그널 / 수익률 보장 / 리딩방 — 홈 1면에 박는다.',
+      tag: '+1주',
+    },
+    {
+      n: '07',
+      title: '1인 vs VC형 결정 메모',
+      body: '검로드·레니 사례 인용해서 가족·공동창업자에게 공유 후 합의.',
+      tag: '+2주',
+    },
   ];
   return (
     <div style={fill}>
       <Style />
-      <div style={{ padding: `${PAD_Y}px ${PAD_X}px`, height: '100%', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div
+        style={{
+          padding: `${PAD_Y}px ${PAD_X}px`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 24,
+        }}
+      >
         <Eyebrow color={C.green}>§7 · 다음 7~14일</Eyebrow>
         <Heading size={84}>이번 주 안에 시작할 7가지.</Heading>
         <Rule width={280} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginTop: 12 }}>
+        <div
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginTop: 12 }}
+        >
           {actions.map((a, i) => (
             <div
               key={a.n}
@@ -1384,8 +1899,18 @@ const Actions: Page = () => {
                 gap: 10,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <div style={{ fontFamily: F.serif, fontSize: 36, fontWeight: 700, color: C.accent, lineHeight: 1 }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}
+              >
+                <div
+                  style={{
+                    fontFamily: F.serif,
+                    fontSize: 36,
+                    fontWeight: 700,
+                    color: C.accent,
+                    lineHeight: 1,
+                  }}
+                >
                   {a.n}
                 </div>
                 <div
@@ -1404,10 +1929,20 @@ const Actions: Page = () => {
                   {a.tag}
                 </div>
               </div>
-              <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, lineHeight: 1.3 }}>
+              <div
+                style={{
+                  fontFamily: F.serif,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: C.text,
+                  lineHeight: 1.3,
+                }}
+              >
                 {a.title}
               </div>
-              <div style={{ fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.5 }}>{a.body}</div>
+              <div style={{ fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.5 }}>
+                {a.body}
+              </div>
             </div>
           ))}
         </div>
@@ -1427,8 +1962,8 @@ const Actions: Page = () => {
             maxWidth: 1500,
           }}
         >
-          <strong>"성공을 확신한다"</strong>를 <strong>"다음 조건 시 멈춘다"</strong>로 변환.
-          이것이 던닝-크루거 정점에서 측정 가능한 영역으로 내려오는 유일한 다리다.
+          <strong>"성공을 확신한다"</strong>를 <strong>"다음 조건 시 멈춘다"</strong>로 변환. 이것이
+          던닝-크루거 정점에서 측정 가능한 영역으로 내려오는 유일한 다리다.
         </div>
       </div>
       <Footer pageNum={13} section="§7 즉시 액션" />
@@ -1528,7 +2063,8 @@ const Final: Page = () => {
             }}
           >
             "내가 만든 점수가 시장 하락기에 고객 손실을 만들었을 때,
-            <span style={{ color: C.warm }}> 30년의 부동산 평판까지 잃을 각오</span>로 출시할 준비가 되어 있는가?"
+            <span style={{ color: C.warm }}> 30년의 부동산 평판까지 잃을 각오</span>로 출시할 준비가
+            되어 있는가?"
           </div>
         </div>
 
@@ -1543,18 +2079,26 @@ const Final: Page = () => {
           }}
         >
           <Body size={22} color={C.muted}>
-            답이 막연하다면 — <strong style={{ color: C.text }}>그 답부터 만드는 것</strong>이 첫 번째 작업이다.
+            답이 막연하다면 — <strong style={{ color: C.text }}>그 답부터 만드는 것</strong>이 첫
+            번째 작업이다.
           </Body>
           <Body size={22} color={C.muted}>
-            구체적 숫자·기한·기준으로 답할 수 있다면 — <strong style={{ color: C.green }}>이미 측정 가능한 영역에 진입</strong>한 것이다.
+            구체적 숫자·기한·기준으로 답할 수 있다면 —{' '}
+            <strong style={{ color: C.green }}>이미 측정 가능한 영역에 진입</strong>한 것이다.
           </Body>
         </div>
 
         <div style={{ marginTop: 12, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Pill>외부 출처: SPIVA 2024 · S&P DJI</Pill>
-          <Pill color={C.warm} fill={C.warmSoft}>FirstPageSage SaaS 2026</Pill>
-          <Pill color={C.green} fill={C.greenSoft}>FourWeekMBA · GitLab/Elastic open core</Pill>
-          <Pill color={C.muted} fill="transparent">금감원 자본시장법 제17·101조의2·444조</Pill>
+          <Pill color={C.warm} fill={C.warmSoft}>
+            FirstPageSage SaaS 2026
+          </Pill>
+          <Pill color={C.green} fill={C.greenSoft}>
+            FourWeekMBA · GitLab/Elastic open core
+          </Pill>
+          <Pill color={C.muted} fill="transparent">
+            금감원 자본시장법 제17·101조의2·444조
+          </Pill>
         </div>
       </div>
       <Footer pageNum={14} section="§6 마지막 질문" />
