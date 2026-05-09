@@ -31,16 +31,79 @@ type SlideInput = {
   fallbackDurationMs?: number;
 };
 
+export type Mp4Quality = 'youtube' | 'standard' | 'draft';
+
 type RenderRequest = {
   slides?: SlideInput[];
   fps?: number;
   resolution?: { width?: number; height?: number };
+  quality?: Mp4Quality;
 };
 
 const DEFAULT_FPS = 30;
 const DEFAULT_FALLBACK_MS = 5000;
 const DEFAULT_WIDTH = 1920;
 const DEFAULT_HEIGHT = 1080;
+const DEFAULT_QUALITY: Mp4Quality = 'youtube';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quality presets
+//
+// The export pipeline previously had no `-crf` or `-b:v`, so libx264 fell
+// back to crf=23. Combined with `-tune stillimage` and the near-static slide
+// content, that produced ~99 kbps 1080p output — far below YouTube's 8 Mbps
+// recommended upload bitrate, with visible mosquito noise around photos and
+// ringing on small Korean text.
+//
+// These presets target three real use cases:
+//   - youtube : visually-lossless source for re-encoding by YT/Vimeo
+//   - standard: comfortable for Drive/Slack/Notion sharing
+//   - draft   : quick preview, smallest file
+//
+// `-tune stillimage` is intentionally OMITTED from youtube/standard. It
+// boosts deblock strength and AC quantization in a way that softens text
+// edges — the wrong trade-off when slides are mostly typography. Draft
+// keeps it because preview file size matters more than text crispness.
+//
+// `keyint=60:min-keyint=30:scenecut=0` produces a closed GOP every 1–2s,
+// which is what YouTube's transcoder prefers and which makes scrubbing
+// smooth in any player.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type QualitySpec = {
+  crf: string;
+  preset: string;
+  audioBitrate: string;
+  tune?: string;
+  x264Params: string;
+};
+
+const QUALITY_PRESETS: Record<Mp4Quality, QualitySpec> = {
+  youtube: {
+    crf: '17',
+    preset: 'slow',
+    audioBitrate: '256k',
+    x264Params: 'keyint=60:min-keyint=30:scenecut=0',
+  },
+  standard: {
+    crf: '20',
+    preset: 'medium',
+    audioBitrate: '192k',
+    x264Params: 'keyint=60:min-keyint=30:scenecut=0',
+  },
+  draft: {
+    crf: '23',
+    preset: 'fast',
+    audioBitrate: '128k',
+    tune: 'stillimage',
+    x264Params: 'keyint=120:min-keyint=30:scenecut=0',
+  },
+};
+
+function resolveQuality(q: string | undefined): QualitySpec {
+  if (q && q in QUALITY_PRESETS) return QUALITY_PRESETS[q as Mp4Quality];
+  return QUALITY_PRESETS[DEFAULT_QUALITY];
+}
 
 export function mp4Plugin(): Plugin {
   return {
@@ -60,12 +123,18 @@ export function mp4Plugin(): Plugin {
             const fps = body.fps ?? DEFAULT_FPS;
             const width = body.resolution?.width ?? DEFAULT_WIDTH;
             const height = body.resolution?.height ?? DEFAULT_HEIGHT;
+            const quality = resolveQuality(body.quality);
 
             const workdir = await mkdtemp(path.join(tmpdir(), 'mos-mp4-'));
             try {
-              const segments = await renderSegments(slides, workdir, { fps, width, height });
+              const segments = await renderSegments(slides, workdir, {
+                fps,
+                width,
+                height,
+                quality,
+              });
               const finalPath = path.join(workdir, 'output.mp4');
-              await concatSegments(segments, workdir, finalPath);
+              await concatSegments(segments, workdir, finalPath, quality);
               const data = await streamFile(finalPath);
 
               res.statusCode = 200;
@@ -126,13 +195,13 @@ export function mp4Plugin(): Plugin {
 
 const AUDIO_SAMPLE_RATE = 48000;
 const AUDIO_CHANNELS = 2;
-const AUDIO_BITRATE = '192k';
 
 async function renderSegments(
   slides: SlideInput[],
   workdir: string,
-  opts: { fps: number; width: number; height: number },
+  opts: { fps: number; width: number; height: number; quality: QualitySpec },
 ): Promise<string[]> {
+  const q = opts.quality;
   const out: string[] = [];
   const frameDurSec = 1 / opts.fps;
 
@@ -180,13 +249,15 @@ async function renderSegments(
         // tts outputs (commonly 22050/24000 Hz mono).
         '-af', `aresample=${AUDIO_SAMPLE_RATE}:async=1:first_pts=0,apad,atrim=end=${durationStr},asetpts=N/SR/TB`,
         '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-tune', 'stillimage',
+        '-preset', q.preset,
+        '-crf', q.crf,
+        ...(q.tune ? ['-tune', q.tune] : []),
+        '-x264-params', q.x264Params,
         '-pix_fmt', 'yuv420p',
         '-r', String(opts.fps),
         '-fps_mode', 'cfr',
         '-c:a', 'aac',
-        '-b:a', AUDIO_BITRATE,
+        '-b:a', q.audioBitrate,
         '-ar', String(AUDIO_SAMPLE_RATE),
         '-ac', String(AUDIO_CHANNELS),
         '-movflags', '+faststart',
@@ -213,13 +284,15 @@ async function renderSegments(
         '-map', '1:a:0',
         '-vf', vfScale,
         '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-tune', 'stillimage',
+        '-preset', q.preset,
+        '-crf', q.crf,
+        ...(q.tune ? ['-tune', q.tune] : []),
+        '-x264-params', q.x264Params,
         '-pix_fmt', 'yuv420p',
         '-r', String(opts.fps),
         '-fps_mode', 'cfr',
         '-c:a', 'aac',
-        '-b:a', AUDIO_BITRATE,
+        '-b:a', q.audioBitrate,
         '-ar', String(AUDIO_SAMPLE_RATE),
         '-ac', String(AUDIO_CHANNELS),
         '-movflags', '+faststart',
@@ -236,6 +309,7 @@ async function concatSegments(
   segments: string[],
   _workdir: string,
   outputPath: string,
+  quality: QualitySpec,
 ): Promise<void> {
   // We intentionally do NOT use the concat demuxer with `-c copy` here.
   // That path is the fastest, but it only stitches packets — segment-to-
@@ -263,11 +337,14 @@ async function concatSegments(
     '-map', '[v]',
     '-map', '[a]',
     '-c:v', 'libx264',
-    '-preset', 'medium',
+    '-preset', quality.preset,
+    '-crf', quality.crf,
+    ...(quality.tune ? ['-tune', quality.tune] : []),
+    '-x264-params', quality.x264Params,
     '-pix_fmt', 'yuv420p',
     '-fps_mode', 'cfr',
     '-c:a', 'aac',
-    '-b:a', AUDIO_BITRATE,
+    '-b:a', quality.audioBitrate,
     '-ar', String(AUDIO_SAMPLE_RATE),
     '-ac', String(AUDIO_CHANNELS),
     '-movflags', '+faststart',
