@@ -237,6 +237,7 @@ export async function renderPagesToPptxData(
         pixelRatio,
         backgroundColor: design.palette.bg,
         cacheBust: true,
+        fontEmbedCSS: '', // Disable font parsing to prevent V8 string length crashes on large CJK fonts
       });
       restoreTextColors();
 

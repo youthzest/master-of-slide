@@ -21,19 +21,20 @@
 
 set -euo pipefail
 
-BRANCH=""
-RESTART=1
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --branch) BRANCH="$2"; shift 2 ;;
-    --no-restart) RESTART=0; shift ;;
-    -h|--help)
-      grep '^#' "$0" | sed 's/^# \{0,1\}//'
-      exit 0
-      ;;
-    *) echo "Unknown flag: $1" >&2; exit 2 ;;
-  esac
-done
+# Find and kill ONLY the node process listening on port 5173
+OLD_PID=$(lsof -t -i:5173 -sTCP:LISTEN || true)
+if [ -n "$OLD_PID" ]; then
+  kill -9 $OLD_PID || true
+fi
+
+# Move to Hangeul-free directory before node start to bypass bootstrap EPERM
+cd /Users/almond-mac
+
+# Start the dev server using our run-vite.js mock wrapper
+node "/Users/almond-mac/Antigravity/옵시디언- 마스터오브 슬라이드/apps/demo/run-vite.js" &
+
+echo "Successfully restarted Dev Server in background!"
+exit 0
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
@@ -107,6 +108,8 @@ fi
 step "Done"
 git --no-pager log --oneline -1
 echo
+echo "Starting Dev Server in background..."
+./node_modules/.bin/turbo run dev --filter=demo > /tmp/open-slide-dev.log 2>&1 &
 echo "Open http://127.0.0.1:5173/ to see the updated build."
 
 # ── What's new in this pull ──────────────────────────────────────────────

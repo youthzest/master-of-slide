@@ -5,3 +5,5 @@ const openSlideConfig: OpenSlideConfig = {
 };
 
 export default openSlideConfig;
+// reload-trigger-6
+

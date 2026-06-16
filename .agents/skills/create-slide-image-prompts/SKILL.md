@@ -133,19 +133,16 @@ Use for scenarios, journeys, campaign narratives, and character-based explainers
 - Ask for or use real screenshots, logos, and private photos instead of
   hallucinating them.
 - Avoid fake charts and fake documents. Use diagram-style abstractions instead.
-- Save generated images under `slides/<id>/assets/`.
-- Import assets with `import hero from './assets/hero.png';` and render with
-  `<img src={hero} alt="..." />`.
+- Use free stock photo URLs (e.g., `https://loremflickr.com/1920/1080/keyword`) directly in the `src` attribute instead of generating images.
+- DO NOT use the `generate_image` tool.
 
 ## When Image Generation Is Available
 
-If the current agent environment can generate images, create the bitmap asset
-after writing the final prompt. Save it under `slides/<id>/assets/` with a
-descriptive filename.
+**CRITICAL RULE: DO NOT use the `generate_image` tool.** To save API costs, we now use free stock photos instead of generating AI images.
+Instead of generating the image, construct a free stock photo URL using: `https://loremflickr.com/1920/1080/{keyword}` (replace `{keyword}` with a 1-2 word English summary of the subject).
+Use this URL directly in the `<img>` tag's `src` attribute. Do not save it to `assets/`.
 
-If image generation is not available, write precise `ImagePlaceholder` hints or
-include an `imagePrompts` section in your final handoff so the user can generate
-assets later.
+If you cannot find a suitable keyword or prefer a placeholder, use `ImagePlaceholder` with a precise hint so the user can drag-and-drop their own Unsplash photo later.
 
 ## Output
 

@@ -1,6 +1,7 @@
-import { FolderInput, FolderPlus, MoreHorizontal, Pencil, Search, Trash2, X } from 'lucide-react';
+import { FolderInput, FolderPlus, MoreHorizontal, Pencil, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AiGeneratorModal } from '../components/ai-generator-modal';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -28,6 +29,8 @@ export function Home() {
   const { manifest, create, update, remove, assign, renameSlide, deleteSlide } = useFolders();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('f') ?? DRAFT_ID;
+  const navigate = useNavigate();
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const selectFolder = (id: string) => {
     setSearchParams(
@@ -151,8 +154,15 @@ export function Home() {
                   </span>
                 )}
               </span>
-              <div className="ml-auto w-full md:w-auto">
+              <div className="ml-auto w-full md:w-auto flex items-center gap-3">
                 <SearchInput value={query} onChange={setQuery} />
+                <Button
+                  onClick={() => setAiModalOpen(true)}
+                  className="h-8 border-2 border-foreground bg-brand text-brand-foreground shadow-[3px_3px_0_var(--foreground)] hover:bg-brand/80 font-black text-[12.5px] flex items-center gap-1.5"
+                >
+                  <Sparkles className="size-3.5 text-brand-foreground" />
+                  Create with AI
+                </Button>
               </div>
             </div>
           </header>
@@ -180,6 +190,14 @@ export function Home() {
           )}
         </div>
       </div>
+
+      <AiGeneratorModal
+        open={aiModalOpen}
+        onOpenChange={setAiModalOpen}
+        onSuccess={(id) => {
+          navigate(`/s/${id}`);
+        }}
+      />
     </div>
   );
 }
@@ -730,3 +748,4 @@ function DeleteDialog({
     </Dialog>
   );
 }
+// HMR force trigger 1

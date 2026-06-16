@@ -5,12 +5,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
     },
     "./vite": {
-      "types": "./dist/vite/index.d.ts",
-      "import": "./dist/vite/index.js"
+      "types": "./src/vite/index.ts",
+      "import": "./src/vite/index.ts"
     },
     "./env": {
       "types": "./env.d.ts"

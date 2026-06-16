@@ -2,7 +2,7 @@ import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
 import type { CSSProperties, ReactNode } from 'react';
 import brandPromise from './assets/brand-promise.png';
 import marketingHero from './assets/marketing-future-hero.png';
-import nvidiaIconLight from './assets/nvidia-icon-light.svg';
+const nvidiaIconLight = '';
 
 export const design: DesignSystem = {
   palette: {

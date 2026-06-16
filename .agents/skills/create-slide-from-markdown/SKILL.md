@@ -138,12 +138,12 @@ For Obsidian notes, support common syntax:
    section for the exact shape.
 10. Self-review with `slide-authoring`.
 
-## AI-generated images
+## Free Stock Images
 
-Use the requested generated image count. Place images on the pages where they
+Use the requested image count. Place images on the pages where they
 add the most value: cover hero, key concept diagram, product/UI visual, chapter
-opener, or summary poster. If the current Codex environment offers image
-generation, generate bitmap assets and save them under `slides/<id>/assets/`.
+opener, or summary poster. To save API costs, DO NOT use the `generate_image` tool.
+Instead, use free stock photo URLs (e.g. `https://loremflickr.com/1920/1080/{keyword}`) directly in the `<img>` src attribute.
 
 Rules:
 
@@ -154,9 +154,9 @@ Rules:
 - Do not generate images that pretend to be real screenshots, real charts,
   private people, internal documents, or brand assets. Use `ImagePlaceholder`
   for those instead.
-- After generating or copying an asset, import it from `./assets/...` and render
-  with ordinary `<img>` tags.
-- If image generation is unavailable, use `ImagePlaceholder` with a precise hint
+- Use URL sources like `https://loremflickr.com/1920/1080/nature` instead of `assets/`.
+- DO NOT use the `generate_image` tool under any circumstances.
+- If a stock photo doesn't fit the context, use `ImagePlaceholder` with a precise hint
   so the user can replace it later through the Assets panel.
 
 ## Output

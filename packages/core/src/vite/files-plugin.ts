@@ -461,6 +461,220 @@ export function validateIcon(v: unknown): FolderIcon | null {
   return null;
 }
 
+export function generateSlideTSX(title: string, slidesData: any[], theme: string): string {
+  const escapeString = (s: string) => {
+    if (typeof s !== 'string') return '';
+    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+  };
+
+  const getThemeColors = (t: string) => {
+    switch (t) {
+      case 'cyberpunk':
+        return { bg: '#0b0f19', text: '#f9fafb', accent: '#60a5fa', line: '#1f2937', font: 'sans-serif' };
+      case 'neo-brutalism':
+        return { bg: '#fef08a', text: '#000000', accent: '#ec4899', line: '#000000', font: 'sans-serif' };
+      case 'paper-press':
+        return { bg: '#f5f2eb', text: '#292524', accent: '#b91c1c', line: '#e7e5e4', font: 'serif' };
+      case 'minimalist':
+      default:
+        return { bg: '#ffffff', text: '#000000', accent: '#0066cc', line: '#e5e7eb', font: 'sans-serif' };
+    }
+  };
+
+  const colors = getThemeColors(theme);
+  let pagesCode = '';
+  const narrations: string[] = [];
+
+  // Cover slide
+  pagesCode += `  // Cover Page\n`;
+  pagesCode += `  () => (\n`;
+  pagesCode += `    <div className="slide-container ${theme === 'neo-brutalism' ? 'brutal-border' : ''}">\n`;
+  pagesCode += `      <Style />\n`;
+  pagesCode += `      <div style={{ position: 'relative', zIndex: 1 }}>\n`;
+  pagesCode += `        <div className="slide-eyebrow">Presentation</div>\n`;
+  pagesCode += `        <h1 className="slide-title" style={{ fontSize: '72px', marginTop: '20px' }}>\n`;
+  pagesCode += `          ${title}\n`;
+  pagesCode += `        </h1>\n`;
+  pagesCode += `        <div style={{ height: '4px', width: '200px', background: '${colors.accent}', margin: '40px 0 20px' }} />\n`;
+  pagesCode += `        <p className="slide-subtitle">AI Generated Slide Deck</p>\n`;
+  pagesCode += `      </div>\n`;
+  pagesCode += `      <div className="slide-footer">\n`;
+  pagesCode += `        <span>Ollama Slide Generator</span>\n`;
+  pagesCode += `        <span>01 / ${String(slidesData.length + 1).padStart(2, '0')}</span>\n`;
+  pagesCode += `      </div>\n`;
+  pagesCode += `    </div>\n`;
+  pagesCode += `  ),\n`;
+  narrations.push(escapeString(`발표 자료 "${title}"를 시작하도록 하겠습니다.`));
+
+  // Subpages
+  slidesData.forEach((s, idx) => {
+    const pageTitle = s.title || s.subject || s.header || `슬라이드 ${idx + 1}`;
+    const notes = s.notes || '';
+    const pageNum = String(idx + 2).padStart(2, '0');
+    const totalNum = String(slidesData.length + 1).padStart(2, '0');
+
+    // Find bullets using fallback keys
+    let bulletsData: any = null;
+    const bulletKeys = ['bullets', 'bullet', 'points', 'point', 'content', 'details', 'keyPoints', 'body', '내용', '핵심내용', 'list'];
+    for (const key of bulletKeys) {
+      if (s[key]) {
+        bulletsData = s[key];
+        break;
+      }
+    }
+
+    // Look for any array in the object if not found yet
+    if (!bulletsData) {
+      const arrayKey = Object.keys(s).find(k => Array.isArray(s[k]) && k !== 'notes');
+      if (arrayKey) {
+        bulletsData = s[arrayKey];
+      }
+    }
+
+    // Convert extracting data to string array cleanly
+    let bulletList: string[] = [];
+    if (Array.isArray(bulletsData)) {
+      bulletList = bulletsData.map(b => typeof b === 'string' ? b : JSON.stringify(b));
+    } else if (typeof bulletsData === 'string' && bulletsData.trim()) {
+      bulletList = bulletsData
+        .split(/\n|;\s*|\.\s+/)
+        .map(b => b.replace(/^[-\*•]\s*/, '').trim())
+        .filter(Boolean);
+    }
+
+    // If completely empty, fallback by splitting notes sentences
+    if (bulletList.length === 0 && typeof notes === 'string' && notes.trim()) {
+      bulletList = notes
+        .split(/[.!?]\s+/)
+        .map(b => b.trim())
+        .filter(b => b.length > 3)
+        .slice(0, 3);
+    }
+
+    pagesCode += `  // Page ${idx + 2}\n`;
+    pagesCode += `  () => (\n`;
+    pagesCode += `    <div className="slide-container ${theme === 'neo-brutalism' ? 'brutal-border' : ''}">\n`;
+    pagesCode += `      <Style />\n`;
+    pagesCode += `      <h2 className="slide-title">${pageTitle}</h2>\n`;
+    pagesCode += `      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>\n`;
+    pagesCode += `        <ul className="bullets-list">\n`;
+    bulletList.forEach((bullet: string) => {
+      pagesCode += `          <li>${bullet}</li>\n`;
+    });
+    pagesCode += `        </ul>\n`;
+    pagesCode += `      </div>\n`;
+    pagesCode += `      <div className="slide-footer">\n`;
+    pagesCode += `        <span>Ollama Slide Generator</span>\n`;
+    pagesCode += `        <span>${pageNum} / ${totalNum}</span>\n`;
+    pagesCode += `      </div>\n`;
+    pagesCode += `    </div>\n`;
+    pagesCode += `  ),\n`;
+    narrations.push(escapeString(notes || pageTitle));
+  });
+
+  const code = `import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
+import React from 'react';
+
+export const design: DesignSystem = {
+  palette: { bg: '${colors.bg}', text: '${colors.text}', accent: '${colors.accent}' },
+  fonts: {
+    display: '${colors.font === 'serif' ? '"Georgia", serif' : '"Pretendard", "Noto Sans KR", system-ui, sans-serif'}',
+    body: '"Pretendard", "Noto Sans KR", system-ui, sans-serif',
+  },
+  typeScale: { hero: 96, body: 28 },
+  radius: 12,
+};
+
+const Style = () => (
+  <style>{\`
+    .slide-container {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 80px 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: ${colors.bg};
+      color: ${colors.text};
+      font-family: var(--osd-font-body);
+      position: relative;
+      overflow: hidden;
+    }
+    .slide-eyebrow {
+      font-size: 18px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: ${colors.accent};
+      font-weight: 600;
+    }
+    .slide-title {
+      font-family: var(--osd-font-display);
+      font-size: 54px;
+      font-weight: 800;
+      color: ${colors.accent};
+      margin: 0 0 24px 0;
+      line-height: 1.25;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+    .slide-subtitle {
+      font-family: var(--osd-font-body);
+      font-size: 28px;
+      color: ${theme === 'cyberpunk' ? '#9ca3af' : '#4b5563'};
+      margin: 0;
+      font-weight: 400;
+    }
+    .bullets-list {
+      font-size: 24px;
+      line-height: 1.6;
+      margin: 0;
+      padding-left: 30px;
+      color: ${colors.text};
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+    .bullets-list li {
+      margin-bottom: 12px;
+      font-weight: 400;
+    }
+    .slide-footer {
+      position: absolute;
+      bottom: 50px;
+      left: 100px;
+      right: 100px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: ${theme === 'cyberpunk' ? '#4b5563' : '#9ca3af'};
+      border-top: 1px solid ${colors.line};
+      padding-top: 15px;
+    }
+    .brutal-border {
+      border: 6px solid #000;
+      box-sizing: border-box;
+    }
+  \`}</style>
+);
+
+export const meta: SlideMeta = {
+  title: '${escapeString(title)}',
+};
+
+export const narration: (string | undefined)[] = [
+${narrations.map(n => `  '${n}'`).join(',\n')}
+];
+
+const pages: Page[] = [
+${pagesCode}
+];
+
+export default pages;
+`;
+
+  return code;
+}
+
 export type FilesPluginOptions = {
   userCwd: string;
   slidesDir?: string;
@@ -507,6 +721,34 @@ export function filesPlugin(opts: FilesPluginOptions): Plugin {
         const method = req.method ?? 'GET';
 
         try {
+          if (url.pathname === '/' && method === 'POST') {
+            const body = (await readBody(req)) as { slideId: string; title: string; slidesData: any[]; theme?: string };
+            const slideId = body.slideId;
+            const title = body.title;
+            const slidesData = body.slidesData;
+            const theme = body.theme ?? 'minimalist';
+
+            if (!slideId || !SLIDE_ID_RE.test(slideId)) {
+              return json(res, 400, { error: 'invalid slideId (use kebab-case with alphanumeric/hyphen/underscore)' });
+            }
+
+            const slideDir = path.resolve(slidesRoot, slideId);
+            await fs.mkdir(slideDir, { recursive: true });
+            await fs.mkdir(path.join(slideDir, 'assets'), { recursive: true });
+
+            const code = generateSlideTSX(title, slidesData, theme);
+            const entry = path.join(slideDir, 'index.tsx');
+            await fs.writeFile(entry, code, 'utf8');
+
+            // Set assignment in manifest
+            const manifest = await readManifest(manifestPath);
+            delete manifest.assignments[slideId];
+            await writeManifest(manifestPath, manifest);
+
+            server.ws.send({ type: 'full-reload' });
+            return json(res, 200, { ok: true, slideId });
+          }
+
           const logoMatch = url.pathname.match(/^\/([^/]+)\/logo$/);
           const idMatch = url.pathname.match(/^\/([^/]+)$/);
           if (!idMatch && !logoMatch) return next();

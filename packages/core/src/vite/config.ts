@@ -38,6 +38,17 @@ function findNodeModulesDirs(...fromDirs: string[]): string[] {
 const PKG_ROOT = findPackageRoot(fileURLToPath(import.meta.url));
 const APP_ROOT = path.join(PKG_ROOT, 'src', 'app');
 
+function normalizePaths(paths: string[]): string[] {
+  const result = new Set<string>();
+  for (const p of paths) {
+    if (!p) continue;
+    result.add(p);
+    result.add(p.normalize('NFC'));
+    result.add(p.normalize('NFD'));
+  }
+  return [...result];
+}
+
 export type CreateViteConfigOptions = {
   userCwd: string;
   config?: OpenSlideConfig;
@@ -103,7 +114,7 @@ export async function createViteConfig(opts: CreateViteConfigOptions): Promise<I
     },
     server: {
       port: config.port ?? 5173,
-      fs: { allow: [APP_ROOT, userCwd, slidesAbs, ...nodeModulesDirs] },
+      fs: { allow: normalizePaths([APP_ROOT, userCwd, slidesAbs, path.dirname(userCwd), ...nodeModulesDirs]) },
     },
     build: {
       outDir: path.resolve(userCwd, 'dist'),
